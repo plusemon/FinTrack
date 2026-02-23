@@ -27,16 +27,20 @@ import Accounts from "./components/Accounts";
 import Categories from "./components/Categories";
 import Budgets from "./components/Budgets";
 import AIChat from "./components/AIChat";
+import SettingsView from "./components/Settings";
+import TransactionForm from "./components/TransactionForm";
 
-type View = "dashboard" | "transactions" | "accounts" | "categories" | "budgets" | "ai-chat" | "more";
+type View = "dashboard" | "transactions" | "accounts" | "categories" | "budgets" | "ai-chat" | "more" | "settings";
 
 export default function App() {
   const [activeView, setActiveView] = useState<View>("dashboard");
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [currency, setCurrency] = useState("BDT");
 
   useEffect(() => {
     fetchSummary();
+    fetchSettings();
   }, []);
 
   const fetchSummary = async () => {
@@ -45,6 +49,17 @@ export default function App() {
       setSummary(data);
     } catch (error) {
       console.error("Failed to fetch summary:", error);
+    }
+  };
+
+  const fetchSettings = async () => {
+    try {
+      const settings = await api.getSettings();
+      if (settings.currency) {
+        setCurrency(settings.currency);
+      }
+    } catch (error) {
+      console.error("Failed to fetch settings:", error);
     }
   };
 
@@ -96,12 +111,13 @@ export default function App() {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
             >
-              {activeView === "dashboard" && <Dashboard summary={summary} onRefresh={fetchSummary} />}
-              {activeView === "transactions" && <Transactions />}
-              {activeView === "accounts" && <Accounts />}
+              {activeView === "dashboard" && <Dashboard summary={summary} onRefresh={fetchSummary} currency={currency} />}
+              {activeView === "transactions" && <Transactions currency={currency} />}
+              {activeView === "accounts" && <Accounts currency={currency} />}
               {activeView === "categories" && <Categories />}
-              {activeView === "budgets" && <Budgets />}
+              {activeView === "budgets" && <Budgets currency={currency} />}
               {activeView === "ai-chat" && <AIChat />}
+              {activeView === "settings" && <SettingsView currentCurrency={currency} onCurrencyChange={setCurrency} />}
               {activeView === "more" && (
                 <div className="grid grid-cols-2 gap-4">
                   <button 
@@ -118,7 +134,10 @@ export default function App() {
                     <div className="p-3 bg-amber-50 text-amber-600 rounded-xl"><Tags size={24} /></div>
                     <span className="font-bold">Categories</span>
                   </button>
-                  <button className="p-6 bg-white rounded-2xl border border-black/5 shadow-sm flex flex-col items-center gap-3 hover:bg-zinc-50 transition-all opacity-50">
+                  <button 
+                    onClick={() => setActiveView("settings")}
+                    className="p-6 bg-white rounded-2xl border border-black/5 shadow-sm flex flex-col items-center gap-3 hover:bg-zinc-50 transition-all"
+                  >
                     <div className="p-3 bg-zinc-50 text-zinc-600 rounded-xl"><Settings size={24} /></div>
                     <span className="font-bold">Settings</span>
                   </button>
@@ -129,34 +148,18 @@ export default function App() {
         </div>
       </main>
 
+      {/* Floating Quick Add Button */}
+      <button
+        onClick={() => setIsQuickAddOpen(true)}
+        className="fixed bottom-24 right-6 w-14 h-14 bg-emerald-600 text-white rounded-2xl shadow-lg shadow-emerald-200 flex items-center justify-center hover:bg-emerald-700 transition-all active:scale-90 z-40"
+      >
+        <Plus size={28} />
+      </button>
+
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-black/5 px-4 pb-safe pt-2 z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
         <div className="max-w-md mx-auto flex items-center justify-between h-16">
-          {navItems.slice(0, 2).map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveView(item.id as View)}
-              className={cn(
-                "flex flex-col items-center justify-center flex-1 gap-1 transition-all",
-                activeView === item.id ? "text-emerald-600" : "text-zinc-400"
-              )}
-            >
-              <item.icon size={22} className={activeView === item.id ? "scale-110" : ""} />
-              <span className="text-[10px] font-bold uppercase tracking-wider">{item.label}</span>
-            </button>
-          ))}
-
-          {/* Quick Add FAB */}
-          <div className="relative -top-6 px-2">
-            <button
-              onClick={() => setIsQuickAddOpen(true)}
-              className="w-14 h-14 bg-emerald-600 text-white rounded-2xl shadow-lg shadow-emerald-200 flex items-center justify-center hover:bg-emerald-700 transition-all active:scale-90"
-            >
-              <Plus size={28} />
-            </button>
-          </div>
-
-          {navItems.slice(2).map((item) => (
+          {navItems.map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveView(item.id as View)}
@@ -194,14 +197,9 @@ export default function App() {
             className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full max-w-lg p-6 sm:p-8 relative"
           >
             <div className="w-12 h-1.5 bg-zinc-200 rounded-full mx-auto mb-6 sm:hidden" />
-            <button 
-              onClick={() => setIsQuickAddOpen(false)}
-              className="absolute top-4 right-4 p-2 hover:bg-black/5 rounded-full hidden sm:block"
-            >
-              <X size={20} />
-            </button>
             <h3 className="text-xl font-bold mb-6">Quick Transaction</h3>
-            <QuickAddForm 
+            <TransactionForm 
+              currency={currency}
               onClose={() => {
                 setIsQuickAddOpen(false);
                 fetchSummary();
@@ -211,145 +209,5 @@ export default function App() {
         </div>
       )}
     </div>
-  );
-}
-
-function QuickAddForm({ onClose }: { onClose: () => void }) {
-  const [type, setType] = useState<"income" | "expense" | "transfer">("expense");
-  const [amount, setAmount] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [accountId, setAccountId] = useState("");
-  const [toAccountId, setToAccountId] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const [notes, setNotes] = useState("");
-  
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-
-  useEffect(() => {
-    api.getAccounts().then(setAccounts);
-    api.getCategories().then(setCategories);
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!amount || !accountId || (type !== 'transfer' && !categoryId)) return;
-
-    await api.addTransaction({
-      type,
-      amount: parseFloat(amount),
-      date,
-      category_id: type === 'transfer' ? null : parseInt(categoryId),
-      account_id: parseInt(accountId),
-      to_account_id: type === 'transfer' ? parseInt(toAccountId) : null,
-      notes
-    });
-    onClose();
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="flex bg-zinc-100 p-1 rounded-xl">
-        {(["expense", "income", "transfer"] as const).map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => setType(t)}
-            className={cn(
-              "flex-1 py-2 rounded-lg text-sm font-medium capitalize transition-all",
-              type === t ? "bg-white shadow-sm text-emerald-600" : "text-zinc-500"
-            )}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-zinc-500 uppercase">Amount</label>
-          <input
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0.00"
-            className="w-full p-3 bg-zinc-50 border border-black/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
-            required
-          />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-zinc-500 uppercase">Date</label>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="w-full p-3 bg-zinc-50 border border-black/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
-            required
-          />
-        </div>
-      </div>
-
-      <div className="space-y-1">
-        <label className="text-xs font-semibold text-zinc-500 uppercase">Account</label>
-        <select
-          value={accountId}
-          onChange={(e) => setAccountId(e.target.value)}
-          className="w-full p-3 bg-zinc-50 border border-black/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
-          required
-        >
-          <option value="">Select Account</option>
-          {accounts.map(a => <option key={a.id} value={a.id}>{a.name} ({formatCurrency(a.balance)})</option>)}
-        </select>
-      </div>
-
-      {type === 'transfer' ? (
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-zinc-500 uppercase">To Account</label>
-          <select
-            value={toAccountId}
-            onChange={(e) => setToAccountId(e.target.value)}
-            className="w-full p-3 bg-zinc-50 border border-black/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
-            required
-          >
-            <option value="">Select Destination Account</option>
-            {accounts.filter(a => a.id.toString() !== accountId).map(a => (
-              <option key={a.id} value={a.id}>{a.name}</option>
-            ))}
-          </select>
-        </div>
-      ) : (
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-zinc-500 uppercase">Category</label>
-          <select
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            className="w-full p-3 bg-zinc-50 border border-black/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
-            required
-          >
-            <option value="">Select Category</option>
-            {categories.filter(c => c.type === type).map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      <div className="space-y-1">
-        <label className="text-xs font-semibold text-zinc-500 uppercase">Notes</label>
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="Optional notes..."
-          className="w-full p-3 bg-zinc-50 border border-black/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none h-20 resize-none"
-        />
-      </div>
-
-      <button
-        type="submit"
-        className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-md"
-      >
-        Save Transaction
-      </button>
-    </form>
   );
 }

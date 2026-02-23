@@ -11,7 +11,11 @@ import { api } from "../services/api";
 import { Budget, Category } from "../types";
 import { formatCurrency, cn } from "../lib/utils";
 
-export default function Budgets() {
+interface BudgetsProps {
+  currency: string;
+}
+
+export default function Budgets({ currency }: BudgetsProps) {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -47,7 +51,7 @@ export default function Budgets() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {budgets.map((budget) => (
-          <BudgetCard key={budget.id} budget={budget} />
+          <BudgetCard key={budget.id} budget={budget} currency={currency} />
         ))}
         {budgets.length === 0 && (
           <div className="col-span-full bg-white p-12 rounded-2xl border border-dashed border-zinc-200 text-center">
@@ -75,7 +79,7 @@ export default function Budgets() {
   );
 }
 
-function BudgetCard({ budget }: { budget: Budget }) {
+function BudgetCard({ budget, currency }: { budget: Budget, currency: string }) {
   const percent = Math.min(Math.round((budget.spent / budget.amount) * 100), 100);
   const isOver = budget.spent > budget.amount;
   const isNear = percent >= 80 && !isOver;
@@ -132,11 +136,11 @@ function BudgetCard({ budget }: { budget: Budget }) {
       <div className="flex justify-between items-end">
         <div>
           <p className="text-xs text-zinc-400 font-bold uppercase mb-1">Spent</p>
-          <p className="text-xl font-bold">{formatCurrency(budget.spent || 0)}</p>
+          <p className="text-xl font-bold">{formatCurrency(budget.spent || 0, currency)}</p>
         </div>
         <div className="text-right">
           <p className="text-xs text-zinc-400 font-bold uppercase mb-1">Budget</p>
-          <p className="text-xl font-bold text-zinc-400">{formatCurrency(budget.amount)}</p>
+          <p className="text-xl font-bold text-zinc-400">{formatCurrency(budget.amount, currency)}</p>
         </div>
       </div>
     </div>

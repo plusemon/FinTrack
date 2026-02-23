@@ -28,9 +28,10 @@ import { formatCurrency, formatDate, cn } from "../lib/utils";
 interface DashboardProps {
   summary: Summary | null;
   onRefresh: () => void;
+  currency: string;
 }
 
-export default function Dashboard({ summary, onRefresh }: DashboardProps) {
+export default function Dashboard({ summary, onRefresh, currency }: DashboardProps) {
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
   const [categoryData, setCategoryData] = useState<any[]>([]);
@@ -56,7 +57,7 @@ export default function Dashboard({ summary, onRefresh }: DashboardProps) {
         return {
           name: day.slice(5),
           income: dayTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0),
-          expense: dayTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0),
+          expense: dayTransactions.filter(t => t.type === 'expense' || (t.type === 'due' && t.status === 'paid')).reduce((sum, t) => sum + t.amount, 0),
         };
       });
       setChartData(trendData);
@@ -67,7 +68,7 @@ export default function Dashboard({ summary, onRefresh }: DashboardProps) {
         .filter(c => c.type === 'expense')
         .map(c => {
           const amount = transactions
-            .filter(t => t.category_id === c.id)
+            .filter(t => t.category_id === c.id && (t.type === 'expense' || (t.type === 'due' && t.status === 'paid')))
             .reduce((sum, t) => sum + t.amount, 0);
           return { name: c.name, value: amount, color: c.color };
         })
@@ -91,6 +92,7 @@ export default function Dashboard({ summary, onRefresh }: DashboardProps) {
             value={summary?.totalBalance || 0} 
             icon={Wallet} 
             color="emerald" 
+            currency={currency}
           />
         </div>
         <SummaryCard 
@@ -99,6 +101,7 @@ export default function Dashboard({ summary, onRefresh }: DashboardProps) {
           icon={TrendingUp} 
           color="blue" 
           trend="+12%"
+          currency={currency}
         />
         <SummaryCard 
           title="Expense" 
@@ -106,6 +109,7 @@ export default function Dashboard({ summary, onRefresh }: DashboardProps) {
           icon={TrendingDown} 
           color="amber" 
           trend="-5%"
+          currency={currency}
         />
       </div>
 
@@ -174,7 +178,7 @@ export default function Dashboard({ summary, onRefresh }: DashboardProps) {
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
                     <span className="text-zinc-600">{item.name}</span>
                   </div>
-                  <span className="font-medium">{formatCurrency(item.value)}</span>
+                  <span className="font-medium">{formatCurrency(item.value, currency)}</span>
                 </div>
               ))}
             </div>
@@ -198,21 +202,34 @@ export default function Dashboard({ summary, onRefresh }: DashboardProps) {
                 <div className={cn(
                   "p-3 rounded-xl",
                   t.type === 'income' ? "bg-emerald-50 text-emerald-600" : 
-                  t.type === 'expense' ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"
+                  t.type === 'expense' ? "bg-red-50 text-red-600" : 
+                  t.type === 'due' ? "bg-amber-50 text-amber-600" : "bg-blue-50 text-blue-600"
                 )}>
                   {t.type === 'income' ? <ArrowDownLeft size={20} /> : 
-                   t.type === 'expense' ? <ArrowUpRight size={20} /> : <ArrowRightLeft size={20} />}
+                   t.type === 'expense' ? <ArrowUpRight size={20} /> : 
+                   t.type === 'due' ? <Clock size={20} /> : <ArrowRightLeft size={20} />}
                 </div>
                 <div>
-                  <p className="font-semibold">{t.category_name || "Transfer"}</p>
-                  <p className="text-xs text-zinc-400">{formatDate(t.date)} • {t.account_name}</p>
+                  <p className="font-semibold">{t.category_name || (t.type === 'due' ? "Credit Purchase" : "Transfer")}</p>
+                  <p className="text-xs text-zinc-400">
+                    {formatDate(t.date)} • {t.account_name}
+                    {t.type === 'due' && (
+                      <span className={cn(
+                        "ml-2 px-1.5 py-0.5 rounded-full text-[8px] font-bold uppercase",
+                        t.status === 'paid' ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                      )}>
+                        {t.status}
+                      </span>
+                    )}
+                  </p>
                 </div>
               </div>
               <p className={cn(
                 "font-bold",
-                t.type === 'income' ? "text-emerald-600" : t.type === 'expense' ? "text-red-600" : "text-blue-600"
+                t.type === 'income' ? "text-emerald-600" : 
+                (t.type === 'expense' || t.type === 'due') ? "text-red-600" : "text-blue-600"
               )}>
-                {t.type === 'expense' ? "-" : t.type === 'income' ? "+" : ""}{formatCurrency(t.amount)}
+                {(t.type === 'expense' || t.type === 'due') ? "-" : t.type === 'income' ? "+" : ""}{formatCurrency(t.amount, currency)}
               </p>
             </div>
           ))}
@@ -227,7 +244,7 @@ export default function Dashboard({ summary, onRefresh }: DashboardProps) {
   );
 }
 
-function SummaryCard({ title, value, icon: Icon, color, trend }: any) {
+function SummaryCard({ title, value, icon: Icon, color, trend, currency }: any) {
   const colors: any = {
     emerald: "bg-emerald-50 text-emerald-600",
     blue: "bg-blue-50 text-blue-600",
@@ -250,7 +267,7 @@ function SummaryCard({ title, value, icon: Icon, color, trend }: any) {
         )}
       </div>
       <p className="text-zinc-500 text-xs sm:text-sm font-medium">{title}</p>
-      <p className="text-lg sm:text-2xl font-bold mt-1 tracking-tight">{formatCurrency(value)}</p>
+      <p className="text-lg sm:text-2xl font-bold mt-1 tracking-tight">{formatCurrency(value, currency)}</p>
     </div>
   );
 }

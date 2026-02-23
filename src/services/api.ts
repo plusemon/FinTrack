@@ -49,6 +49,22 @@ export const api = {
     return res.json();
   },
 
+  async updateTransaction(id: number, transaction: Omit<Transaction, "id">): Promise<{ success: boolean }> {
+    const res = await fetch(`/api/transactions/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(transaction),
+    });
+    return res.json();
+  },
+
+  async deleteTransaction(id: number): Promise<{ success: boolean }> {
+    const res = await fetch(`/api/transactions/${id}`, {
+      method: "DELETE",
+    });
+    return res.json();
+  },
+
   async getBudgets(): Promise<Budget[]> {
     const res = await fetch("/api/budgets");
     return res.json();
@@ -59,6 +75,20 @@ export const api = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(budget),
+    });
+    return res.json();
+  },
+
+  async getSettings(): Promise<Record<string, string>> {
+    const res = await fetch("/api/settings");
+    return res.json();
+  },
+
+  async updateSetting(key: string, value: string): Promise<{ success: boolean }> {
+    const res = await fetch("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key, value }),
     });
     return res.json();
   },

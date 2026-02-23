@@ -12,7 +12,11 @@ import { api } from "../services/api";
 import { Account } from "../types";
 import { formatCurrency, cn } from "../lib/utils";
 
-export default function Accounts() {
+interface AccountsProps {
+  currency: string;
+}
+
+export default function Accounts({ currency }: AccountsProps) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -43,7 +47,7 @@ export default function Accounts() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {accounts.map((account) => (
-          <AccountCard key={account.id} account={account} />
+          <AccountCard key={account.id} account={account} currency={currency} />
         ))}
       </div>
 
@@ -59,7 +63,7 @@ export default function Accounts() {
   );
 }
 
-function AccountCard({ account }: { account: Account }) {
+function AccountCard({ account, currency }: { account: Account, currency: string }) {
   return (
     <div className="bg-white p-6 rounded-2xl border border-black/5 shadow-sm hover:shadow-md transition-all group">
       <div className="flex items-start justify-between mb-8">
@@ -80,7 +84,7 @@ function AccountCard({ account }: { account: Account }) {
       <div className="mt-6 pt-6 border-t border-black/5 flex items-end justify-between">
         <div>
           <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1">Current Balance</p>
-          <p className="text-2xl font-black tracking-tight">{formatCurrency(account.balance)}</p>
+          <p className="text-2xl font-black tracking-tight">{formatCurrency(account.balance, currency)}</p>
         </div>
         <div className="flex gap-1">
           <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">

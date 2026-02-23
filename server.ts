@@ -32,13 +32,15 @@ db.exec(`
 
   CREATE TABLE IF NOT EXISTS transactions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    type TEXT NOT NULL, -- 'income', 'expense', 'transfer'
+    type TEXT NOT NULL, -- 'income', 'expense', 'transfer', 'due'
     amount REAL NOT NULL,
     date TEXT NOT NULL,
     category_id INTEGER,
     account_id INTEGER NOT NULL,
     to_account_id INTEGER,
     notes TEXT,
+    status TEXT DEFAULT 'paid', -- 'paid', 'unpaid'
+    due_date TEXT,
     FOREIGN KEY (category_id) REFERENCES categories(id),
     FOREIGN KEY (account_id) REFERENCES accounts(id),
     FOREIGN KEY (to_account_id) REFERENCES accounts(id)
@@ -63,6 +65,11 @@ db.exec(`
     FOREIGN KEY (category_id) REFERENCES categories(id),
     FOREIGN KEY (account_id) REFERENCES accounts(id)
   );
+
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
 `);
 
 // Seed initial data if empty
@@ -76,6 +83,12 @@ if (accountCount.count === 0) {
   db.prepare("INSERT INTO categories (name, type, icon, color) VALUES (?, ?, ?, ?)").run("Rent", "expense", "Home", "#f59e0b");
 }
 
+// Ensure default settings
+const currencySetting = db.prepare("SELECT * FROM settings WHERE key = ?").get("currency");
+if (!currencySetting) {
+  db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("currency", "BDT");
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -87,7 +100,7 @@ async function startServer() {
     const totalBalance = db.prepare("SELECT SUM(balance) as total FROM accounts").get() as { total: number };
     const currentMonth = new Date().toISOString().slice(0, 7);
     const monthlyIncome = db.prepare("SELECT SUM(amount) as total FROM transactions WHERE type = 'income' AND date LIKE ?").get(`${currentMonth}%`) as { total: number };
-    const monthlyExpense = db.prepare("SELECT SUM(amount) as total FROM transactions WHERE type = 'expense' AND date LIKE ?").get(`${currentMonth}%`) as { total: number };
+    const monthlyExpense = db.prepare("SELECT SUM(amount) as total FROM transactions WHERE (type = 'expense' OR (type = 'due' AND status = 'paid')) AND date LIKE ?").get(`${currentMonth}%`) as { total: number };
     
     res.json({
       totalBalance: totalBalance.total || 0,
@@ -140,18 +153,20 @@ async function startServer() {
   });
 
   app.post("/api/transactions", (req, res) => {
-    const { type, amount, date, category_id, account_id, to_account_id, notes } = req.body;
+    const { type, amount, date, category_id, account_id, to_account_id, notes, status, due_date } = req.body;
     
     const transaction = db.transaction(() => {
-      const result = db.prepare("INSERT INTO transactions (type, amount, date, category_id, account_id, to_account_id, notes) VALUES (?, ?, ?, ?, ?, ?, ?)").run(type, amount, date, category_id, account_id, to_account_id, notes);
+      const result = db.prepare("INSERT INTO transactions (type, amount, date, category_id, account_id, to_account_id, notes, status, due_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").run(type, amount, date, category_id, account_id, to_account_id, notes, status || 'paid', due_date);
       
-      if (type === 'income') {
-        db.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ?").run(amount, account_id);
-      } else if (type === 'expense') {
-        db.prepare("UPDATE accounts SET balance = balance - ? WHERE id = ?").run(amount, account_id);
-      } else if (type === 'transfer') {
-        db.prepare("UPDATE accounts SET balance = balance - ? WHERE id = ?").run(amount, account_id);
-        db.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ?").run(amount, to_account_id);
+      if (status !== 'unpaid') {
+        if (type === 'income') {
+          db.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ?").run(amount, account_id);
+        } else if (type === 'expense' || type === 'due') {
+          db.prepare("UPDATE accounts SET balance = balance - ? WHERE id = ?").run(amount, account_id);
+        } else if (type === 'transfer') {
+          db.prepare("UPDATE accounts SET balance = balance - ? WHERE id = ?").run(amount, account_id);
+          db.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ?").run(amount, to_account_id);
+        }
       }
       
       return result.lastInsertRowid;
@@ -161,10 +176,91 @@ async function startServer() {
     res.json({ id });
   });
 
+  app.put("/api/transactions/:id", (req, res) => {
+    const { id } = req.params;
+    const { type, amount, date, category_id, account_id, to_account_id, notes, status, due_date } = req.body;
+
+    const updateTransaction = db.transaction(() => {
+      // 1. Get old transaction
+      const old = db.prepare("SELECT * FROM transactions WHERE id = ?").get(id) as any;
+      if (!old) return false;
+
+      // 2. Reverse old transaction's effect on balances if it was paid
+      if (old.status !== 'unpaid') {
+        if (old.type === 'income') {
+          db.prepare("UPDATE accounts SET balance = balance - ? WHERE id = ?").run(old.amount, old.account_id);
+        } else if (old.type === 'expense' || old.type === 'due') {
+          db.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ?").run(old.amount, old.account_id);
+        } else if (old.type === 'transfer') {
+          db.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ?").run(old.amount, old.account_id);
+          db.prepare("UPDATE accounts SET balance = balance - ? WHERE id = ?").run(old.amount, old.to_account_id);
+        }
+      }
+
+      // 3. Update transaction
+      db.prepare(`
+        UPDATE transactions 
+        SET type = ?, amount = ?, date = ?, category_id = ?, account_id = ?, to_account_id = ?, notes = ?, status = ?, due_date = ?
+        WHERE id = ?
+      `).run(type, amount, date, category_id, account_id, to_account_id, notes, status || 'paid', due_date, id);
+
+      // 4. Apply new transaction's effect on balances if it is paid
+      if (status !== 'unpaid') {
+        if (type === 'income') {
+          db.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ?").run(amount, account_id);
+        } else if (type === 'expense' || type === 'due') {
+          db.prepare("UPDATE accounts SET balance = balance - ? WHERE id = ?").run(amount, account_id);
+        } else if (type === 'transfer') {
+          db.prepare("UPDATE accounts SET balance = balance - ? WHERE id = ?").run(amount, account_id);
+          db.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ?").run(amount, to_account_id);
+        }
+      }
+
+      return true;
+    });
+
+    const success = updateTransaction();
+    if (success) {
+      res.json({ success: true });
+    } else {
+      res.status(404).json({ error: "Transaction not found" });
+    }
+  });
+
+  app.delete("/api/transactions/:id", (req, res) => {
+    const { id } = req.params;
+
+    const deleteTransaction = db.transaction(() => {
+      const old = db.prepare("SELECT * FROM transactions WHERE id = ?").get(id) as any;
+      if (!old) return false;
+
+      if (old.status !== 'unpaid') {
+        if (old.type === 'income') {
+          db.prepare("UPDATE accounts SET balance = balance - ? WHERE id = ?").run(old.amount, old.account_id);
+        } else if (old.type === 'expense' || old.type === 'due') {
+          db.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ?").run(old.amount, old.account_id);
+        } else if (old.type === 'transfer') {
+          db.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ?").run(old.amount, old.account_id);
+          db.prepare("UPDATE accounts SET balance = balance - ? WHERE id = ?").run(old.amount, old.to_account_id);
+        }
+      }
+
+      db.prepare("DELETE FROM transactions WHERE id = ?").run(id);
+      return true;
+    });
+
+    const success = deleteTransaction();
+    if (success) {
+      res.json({ success: true });
+    } else {
+      res.status(404).json({ error: "Transaction not found" });
+    }
+  });
+
   app.get("/api/budgets", (req, res) => {
     const budgets = db.prepare(`
       SELECT b.*, c.name as category_name, 
-      (SELECT SUM(amount) FROM transactions WHERE category_id = b.category_id AND date LIKE ?) as spent
+      (SELECT SUM(amount) FROM transactions WHERE category_id = b.category_id AND status = 'paid' AND date LIKE ?) as spent
       FROM budgets b
       LEFT JOIN categories c ON b.category_id = c.id
     `).all(`${new Date().toISOString().slice(0, 7)}%`);
@@ -175,6 +271,21 @@ async function startServer() {
     const { category_id, amount, period } = req.body;
     const result = db.prepare("INSERT INTO budgets (category_id, amount, period) VALUES (?, ?, ?)").run(category_id, amount, period);
     res.json({ id: result.lastInsertRowid });
+  });
+
+  app.get("/api/settings", (req, res) => {
+    const settings = db.prepare("SELECT * FROM settings").all();
+    const settingsObj = settings.reduce((acc: any, curr: any) => {
+      acc[curr.key] = curr.value;
+      return acc;
+    }, {});
+    res.json(settingsObj);
+  });
+
+  app.post("/api/settings", (req, res) => {
+    const { key, value } = req.body;
+    db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)").run(key, value);
+    res.json({ success: true });
   });
 
   // Vite middleware for development

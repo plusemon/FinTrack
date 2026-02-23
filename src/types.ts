@@ -1,4 +1,4 @@
-export type TransactionType = "income" | "expense" | "transfer";
+export type TransactionType = "income" | "expense" | "transfer" | "due";
 
 export interface Account {
   id: number;
@@ -29,6 +29,8 @@ export interface Transaction {
   account_name?: string;
   to_account_id: number | null;
   notes: string;
+  status: "paid" | "unpaid";
+  due_date?: string;
 }
 
 export interface Budget {
