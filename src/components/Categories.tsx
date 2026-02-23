@@ -13,11 +13,18 @@ import {
 import { api } from "../services/api";
 import { Category } from "../types";
 import { cn } from "../lib/utils";
+import { translations, Language } from "../i18n/translations";
 
-export default function Categories() {
+interface CategoriesProps {
+  language: Language;
+}
+
+export default function Categories({ language }: CategoriesProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"expense" | "income">("expense");
+
+  const t = translations[language];
 
   useEffect(() => {
     fetchCategories();
@@ -34,15 +41,15 @@ export default function Categories() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-2xl font-bold tracking-tight">Categories</h3>
-          <p className="text-zinc-500">Organize your transactions with custom categories.</p>
+          <h3 className="text-2xl font-bold tracking-tight">{t.categories}</h3>
+          <p className="text-zinc-500">{t.organizeCategories}</p>
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
           className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-md"
         >
           <Plus size={20} />
-          New Category
+          {t.newCategory}
         </button>
       </div>
 
@@ -56,7 +63,7 @@ export default function Categories() {
             )}
           >
             <TrendingDown size={18} />
-            Expense Categories
+            {t.expenseCategories}
           </button>
           <button
             onClick={() => setActiveTab("income")}
@@ -66,7 +73,7 @@ export default function Categories() {
             )}
           >
             <TrendingUp size={18} />
-            Income Categories
+            {t.incomeCategories}
           </button>
         </div>
 
@@ -80,7 +87,7 @@ export default function Categories() {
           ))}
           {rootCategories.length === 0 && (
             <div className="text-center py-12 text-zinc-400">
-              No categories found for this type.
+              {t.noCategoriesFound}
             </div>
           )}
         </div>
@@ -89,10 +96,11 @@ export default function Categories() {
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 relative">
-            <h3 className="text-xl font-bold mb-6">New Category</h3>
+            <h3 className="text-xl font-bold mb-6">{t.newCategory}</h3>
             <CategoryForm 
               onClose={() => { setIsModalOpen(false); fetchCategories(); }} 
               categories={categories}
+              t={t}
             />
           </div>
         </div>
@@ -155,7 +163,7 @@ function CategoryItem({ category, allCategories }: { category: Category, allCate
   );
 }
 
-function CategoryForm({ onClose, categories }: { onClose: () => void, categories: Category[] }) {
+function CategoryForm({ onClose, categories, t }: { onClose: () => void, categories: Category[], t: any }) {
   const [name, setName] = useState("");
   const [type, setType] = useState<"expense" | "income">("expense");
   const [parentId, setParentId] = useState("");
@@ -176,7 +184,7 @@ function CategoryForm({ onClose, categories }: { onClose: () => void, categories
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-1">
-        <label className="text-xs font-bold text-zinc-500 uppercase">Category Name</label>
+        <label className="text-xs font-bold text-zinc-500 uppercase">{t.categoryName}</label>
         <input
           type="text"
           value={name}
@@ -187,38 +195,38 @@ function CategoryForm({ onClose, categories }: { onClose: () => void, categories
         />
       </div>
       <div className="space-y-1">
-        <label className="text-xs font-bold text-zinc-500 uppercase">Type</label>
+        <label className="text-xs font-bold text-zinc-500 uppercase">{t.type}</label>
         <div className="flex bg-zinc-100 p-1 rounded-xl">
-          {(["expense", "income"] as const).map((t) => (
+          {(["expense", "income"] as const).map((ty) => (
             <button
-              key={t}
+              key={ty}
               type="button"
-              onClick={() => setType(t)}
+              onClick={() => setType(ty)}
               className={cn(
                 "flex-1 py-2 rounded-lg text-sm font-medium capitalize transition-all",
-                type === t ? "bg-white shadow-sm text-emerald-600" : "text-zinc-50"
+                type === ty ? "bg-white shadow-sm text-emerald-600" : "text-zinc-500"
               )}
             >
-              {t}
+              {ty === 'expense' ? t.expense : t.income}
             </button>
           ))}
         </div>
       </div>
       <div className="space-y-1">
-        <label className="text-xs font-bold text-zinc-500 uppercase">Parent Category (Optional)</label>
+        <label className="text-xs font-bold text-zinc-500 uppercase">{t.parentCategory}</label>
         <select
           value={parentId}
           onChange={(e) => setParentId(e.target.value)}
           className="w-full p-3 bg-zinc-50 border border-black/5 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
         >
-          <option value="">None (Root Category)</option>
+          <option value="">{t.noneRoot}</option>
           {categories.filter(c => c.type === type && !c.parent_id).map(c => (
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
         </select>
       </div>
       <div className="space-y-1">
-        <label className="text-xs font-bold text-zinc-500 uppercase">Theme Color</label>
+        <label className="text-xs font-bold text-zinc-500 uppercase">{t.themeColor}</label>
         <div className="flex gap-2">
           {["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#1a1a1a"].map(c => (
             <button
@@ -240,13 +248,13 @@ function CategoryForm({ onClose, categories }: { onClose: () => void, categories
           onClick={onClose}
           className="flex-1 py-3 border border-black/5 rounded-xl font-bold text-zinc-500 hover:bg-zinc-50 transition-all"
         >
-          Cancel
+          {t.cancel}
         </button>
         <button
           type="submit"
           className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-md"
         >
-          Create
+          {t.create}
         </button>
       </div>
     </form>

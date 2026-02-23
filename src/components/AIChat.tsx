@@ -13,6 +13,7 @@ import Markdown from "react-markdown";
 import { geminiService } from "../services/gemini";
 import { cn } from "../lib/utils";
 import { motion, AnimatePresence } from "motion/react";
+import { translations, Language } from "../i18n/translations";
 
 interface Message {
   role: "user" | "model";
@@ -21,11 +22,16 @@ interface Message {
   audioUrl?: string;
 }
 
-export default function AIChat() {
+interface AIChatProps {
+  language: Language;
+}
+
+export default function AIChat({ language }: AIChatProps) {
+  const t = translations[language];
   const [messages, setMessages] = useState<Message[]>([
     { 
       role: "model", 
-      content: "Hello! I'm your FinTrack AI assistant. How can I help you with your finances today? I can analyze your spending, give advice, or even visualize your financial goals!", 
+      content: t.aiWelcome, 
       type: "text" 
     }
   ]);
@@ -51,10 +57,10 @@ export default function AIChat() {
 
     try {
       const response = await geminiService.chat(input, []);
-      setMessages(prev => [...prev, { role: "model", content: response || "I'm sorry, I couldn't process that.", type: "text" }]);
+      setMessages(prev => [...prev, { role: "model", content: response || t.aiNoResponse, type: "text" }]);
     } catch (error) {
       console.error("Chat error:", error);
-      setMessages(prev => [...prev, { role: "model", content: "Sorry, I encountered an error. Please try again.", type: "text" }]);
+      setMessages(prev => [...prev, { role: "model", content: t.aiError, type: "text" }]);
     } finally {
       setIsLoading(false);
     }
@@ -63,7 +69,7 @@ export default function AIChat() {
   const handleGenerateImage = async () => {
     if (!input.trim() || isGeneratingImage) return;
 
-    const userMessage: Message = { role: "user", content: `Generate a financial visualization for: ${input}`, type: "text" };
+    const userMessage: Message = { role: "user", content: `${t.aiImagePrompt}${input}`, type: "text" };
     setMessages(prev => [...prev, userMessage]);
     const prompt = input;
     setInput("");
@@ -74,7 +80,7 @@ export default function AIChat() {
       setMessages(prev => [...prev, { role: "model", content: imageUrl, type: "image" }]);
     } catch (error) {
       console.error("Image generation error:", error);
-      setMessages(prev => [...prev, { role: "model", content: "Failed to generate image. Please try a different prompt.", type: "text" }]);
+      setMessages(prev => [...prev, { role: "model", content: t.aiImageError, type: "text" }]);
     } finally {
       setIsGeneratingImage(false);
     }
@@ -104,10 +110,10 @@ export default function AIChat() {
             <Bot size={24} />
           </div>
           <div>
-            <h3 className="font-bold text-zinc-900">FinTrack AI</h3>
+            <h3 className="font-bold text-zinc-900">{t.aiAssistant}</h3>
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-              <span className="text-xs text-zinc-500 font-medium">Online & Ready</span>
+              <span className="text-xs text-zinc-500 font-medium">{t.onlineReady}</span>
             </div>
           </div>
         </div>
@@ -177,7 +183,7 @@ export default function AIChat() {
                     className="flex items-center gap-1.5 text-xs font-bold text-zinc-400 hover:text-emerald-600 transition-colors"
                   >
                     <Volume2 size={14} />
-                    Listen
+                    {t.listen}
                   </button>
                 )}
               </div>
@@ -197,7 +203,7 @@ export default function AIChat() {
             <div className="bg-zinc-50 border border-black/5 p-4 rounded-2xl rounded-tl-none flex items-center gap-3">
               <Loader2 size={18} className="animate-spin text-emerald-600" />
               <span className="text-sm text-zinc-500 font-medium">
-                {isGeneratingImage ? "Generating visualization..." : "Thinking..."}
+                {isGeneratingImage ? t.generatingVisualization : t.thinking}
               </span>
             </div>
           </motion.div>
@@ -216,7 +222,7 @@ export default function AIChat() {
                 handleSend();
               }
             }}
-            placeholder="Ask anything about your finances or generate a goal visualization..."
+            placeholder={t.askAnything}
             className="w-full p-4 pr-32 bg-white border border-black/10 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none shadow-sm resize-none h-20"
           />
           <div className="absolute right-3 bottom-3 flex gap-2">
@@ -224,7 +230,7 @@ export default function AIChat() {
               onClick={handleGenerateImage}
               disabled={!input.trim() || isGeneratingImage || isLoading}
               className="p-2 text-zinc-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all disabled:opacity-50"
-              title="Generate Visualization"
+              title={t.generateVisualization}
             >
               <ImageIcon size={22} />
             </button>
@@ -239,7 +245,7 @@ export default function AIChat() {
         </div>
         <p className="text-[10px] text-zinc-400 text-center mt-2 font-medium flex items-center justify-center gap-1">
           <Sparkles size={10} />
-          Powered by Gemini 3.1 Pro & Imagen
+          {t.poweredBy}
         </p>
       </div>
     </div>

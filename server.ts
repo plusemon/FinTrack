@@ -95,197 +95,277 @@ async function startServer() {
 
   app.use(express.json());
 
+  // Health check
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok" });
+  });
+
   // API Routes
   app.get("/api/summary", (req, res) => {
-    const totalBalance = db.prepare("SELECT SUM(balance) as total FROM accounts").get() as { total: number };
-    const currentMonth = new Date().toISOString().slice(0, 7);
-    const monthlyIncome = db.prepare("SELECT SUM(amount) as total FROM transactions WHERE type = 'income' AND date LIKE ?").get(`${currentMonth}%`) as { total: number };
-    const monthlyExpense = db.prepare("SELECT SUM(amount) as total FROM transactions WHERE (type = 'expense' OR (type = 'due' AND status = 'paid')) AND date LIKE ?").get(`${currentMonth}%`) as { total: number };
-    
-    res.json({
-      totalBalance: totalBalance.total || 0,
-      monthlyIncome: monthlyIncome.total || 0,
-      monthlyExpense: monthlyExpense.total || 0
-    });
+    try {
+      const totalBalance = db.prepare("SELECT SUM(balance) as total FROM accounts").get() as { total: number | null };
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const monthlyIncome = db.prepare("SELECT SUM(amount) as total FROM transactions WHERE type = 'income' AND date LIKE ?").get(`${currentMonth}%`) as { total: number | null };
+      const monthlyExpense = db.prepare("SELECT SUM(amount) as total FROM transactions WHERE (type = 'expense' OR (type = 'due' AND status = 'paid')) AND date LIKE ?").get(`${currentMonth}%`) as { total: number | null };
+      
+      res.json({
+        totalBalance: totalBalance?.total || 0,
+        monthlyIncome: monthlyIncome?.total || 0,
+        monthlyExpense: monthlyExpense?.total || 0
+      });
+    } catch (error) {
+      console.error("Error in /api/summary:", error);
+      res.status(500).json({ error: "Failed to fetch summary" });
+    }
   });
 
   app.get("/api/accounts", (req, res) => {
-    const accounts = db.prepare("SELECT * FROM accounts").all();
-    res.json(accounts);
+    try {
+      const accounts = db.prepare("SELECT * FROM accounts").all();
+      res.json(accounts);
+    } catch (error) {
+      console.error("Error in GET /api/accounts:", error);
+      res.status(500).json({ error: "Failed to fetch accounts" });
+    }
   });
 
   app.post("/api/accounts", (req, res) => {
-    const { name, type, balance, icon, color } = req.body;
-    const result = db.prepare("INSERT INTO accounts (name, type, balance, icon, color) VALUES (?, ?, ?, ?, ?)").run(name, type, balance, icon, color);
-    res.json({ id: result.lastInsertRowid });
+    try {
+      const { name, type, balance, icon, color } = req.body;
+      const result = db.prepare("INSERT INTO accounts (name, type, balance, icon, color) VALUES (?, ?, ?, ?, ?)").run(name, type, balance, icon, color);
+      res.json({ id: result.lastInsertRowid });
+    } catch (error) {
+      console.error("Error in POST /api/accounts:", error);
+      res.status(500).json({ error: "Failed to add account" });
+    }
   });
 
   app.get("/api/categories", (req, res) => {
-    const categories = db.prepare("SELECT * FROM categories").all();
-    res.json(categories);
+    try {
+      const categories = db.prepare("SELECT * FROM categories").all();
+      res.json(categories);
+    } catch (error) {
+      console.error("Error in GET /api/categories:", error);
+      res.status(500).json({ error: "Failed to fetch categories" });
+    }
   });
 
   app.post("/api/categories", (req, res) => {
-    const { name, parent_id, type, icon, color } = req.body;
-    const result = db.prepare("INSERT INTO categories (name, parent_id, type, icon, color) VALUES (?, ?, ?, ?, ?)").run(name, parent_id, type, icon, color);
-    res.json({ id: result.lastInsertRowid });
+    try {
+      const { name, parent_id, type, icon, color } = req.body;
+      const result = db.prepare("INSERT INTO categories (name, parent_id, type, icon, color) VALUES (?, ?, ?, ?, ?)").run(name, parent_id, type, icon, color);
+      res.json({ id: result.lastInsertRowid });
+    } catch (error) {
+      console.error("Error in POST /api/categories:", error);
+      res.status(500).json({ error: "Failed to add category" });
+    }
   });
 
   app.get("/api/transactions", (req, res) => {
-    const { startDate, endDate, categoryId, accountId } = req.query;
-    let query = `
-      SELECT t.*, c.name as category_name, a.name as account_name 
-      FROM transactions t
-      LEFT JOIN categories c ON t.category_id = c.id
-      JOIN accounts a ON t.account_id = a.id
-      WHERE 1=1
-    `;
-    const params: any[] = [];
+    try {
+      const { startDate, endDate, categoryId, accountId } = req.query;
+      let query = `
+        SELECT t.*, c.name as category_name, a.name as account_name 
+        FROM transactions t
+        LEFT JOIN categories c ON t.category_id = c.id
+        JOIN accounts a ON t.account_id = a.id
+        WHERE 1=1
+      `;
+      const params: any[] = [];
 
-    if (startDate) { query += " AND t.date >= ?"; params.push(startDate); }
-    if (endDate) { query += " AND t.date <= ?"; params.push(endDate); }
-    if (categoryId) { query += " AND t.category_id = ?"; params.push(categoryId); }
-    if (accountId) { query += " AND t.account_id = ?"; params.push(accountId); }
+      if (startDate) { query += " AND t.date >= ?"; params.push(startDate); }
+      if (endDate) { query += " AND t.date <= ?"; params.push(endDate); }
+      if (categoryId) { query += " AND t.category_id = ?"; params.push(categoryId); }
+      if (accountId) { query += " AND t.account_id = ?"; params.push(accountId); }
 
-    query += " ORDER BY t.date DESC, t.id DESC";
-    const transactions = db.prepare(query).all(...params);
-    res.json(transactions);
+      query += " ORDER BY t.date DESC, t.id DESC";
+      const transactions = db.prepare(query).all(...params);
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error in GET /api/transactions:", error);
+      res.status(500).json({ error: "Failed to fetch transactions" });
+    }
   });
 
   app.post("/api/transactions", (req, res) => {
-    const { type, amount, date, category_id, account_id, to_account_id, notes, status, due_date } = req.body;
-    
-    const transaction = db.transaction(() => {
-      const result = db.prepare("INSERT INTO transactions (type, amount, date, category_id, account_id, to_account_id, notes, status, due_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").run(type, amount, date, category_id, account_id, to_account_id, notes, status || 'paid', due_date);
+    try {
+      const { type, amount, date, category_id, account_id, to_account_id, notes, status, due_date } = req.body;
       
-      if (status !== 'unpaid') {
-        if (type === 'income') {
-          db.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ?").run(amount, account_id);
-        } else if (type === 'expense' || type === 'due') {
-          db.prepare("UPDATE accounts SET balance = balance - ? WHERE id = ?").run(amount, account_id);
-        } else if (type === 'transfer') {
-          db.prepare("UPDATE accounts SET balance = balance - ? WHERE id = ?").run(amount, account_id);
-          db.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ?").run(amount, to_account_id);
+      const transaction = db.transaction(() => {
+        const result = db.prepare("INSERT INTO transactions (type, amount, date, category_id, account_id, to_account_id, notes, status, due_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+          type, 
+          amount, 
+          date, 
+          category_id || null, 
+          account_id, 
+          to_account_id || null, 
+          notes || null, 
+          status || 'paid', 
+          due_date || null
+        );
+        
+        if (status !== 'unpaid') {
+          if (type === 'income') {
+            db.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ?").run(amount, account_id);
+          } else if (type === 'expense' || type === 'due') {
+            db.prepare("UPDATE accounts SET balance = balance - ? WHERE id = ?").run(amount, account_id);
+          } else if (type === 'transfer') {
+            db.prepare("UPDATE accounts SET balance = balance - ? WHERE id = ?").run(amount, account_id);
+            db.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ?").run(amount, to_account_id);
+          }
         }
-      }
-      
-      return result.lastInsertRowid;
-    });
+        
+        return result.lastInsertRowid;
+      });
 
-    const id = transaction();
-    res.json({ id });
+      const id = transaction();
+      res.json({ id });
+    } catch (error) {
+      console.error("Error in POST /api/transactions:", error);
+      res.status(500).json({ error: "Failed to add transaction" });
+    }
   });
 
   app.put("/api/transactions/:id", (req, res) => {
-    const { id } = req.params;
-    const { type, amount, date, category_id, account_id, to_account_id, notes, status, due_date } = req.body;
+    try {
+      const { id } = req.params;
+      const { type, amount, date, category_id, account_id, to_account_id, notes, status, due_date } = req.body;
 
-    const updateTransaction = db.transaction(() => {
-      // 1. Get old transaction
-      const old = db.prepare("SELECT * FROM transactions WHERE id = ?").get(id) as any;
-      if (!old) return false;
+      const updateTransaction = db.transaction(() => {
+        // 1. Get old transaction
+        const old = db.prepare("SELECT * FROM transactions WHERE id = ?").get(id) as any;
+        if (!old) return false;
 
-      // 2. Reverse old transaction's effect on balances if it was paid
-      if (old.status !== 'unpaid') {
-        if (old.type === 'income') {
-          db.prepare("UPDATE accounts SET balance = balance - ? WHERE id = ?").run(old.amount, old.account_id);
-        } else if (old.type === 'expense' || old.type === 'due') {
-          db.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ?").run(old.amount, old.account_id);
-        } else if (old.type === 'transfer') {
-          db.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ?").run(old.amount, old.account_id);
-          db.prepare("UPDATE accounts SET balance = balance - ? WHERE id = ?").run(old.amount, old.to_account_id);
+        // 2. Reverse old transaction's effect on balances if it was paid
+        if (old.status !== 'unpaid') {
+          if (old.type === 'income') {
+            db.prepare("UPDATE accounts SET balance = balance - ? WHERE id = ?").run(old.amount, old.account_id);
+          } else if (old.type === 'expense' || old.type === 'due') {
+            db.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ?").run(old.amount, old.account_id);
+          } else if (old.type === 'transfer') {
+            db.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ?").run(old.amount, old.account_id);
+            db.prepare("UPDATE accounts SET balance = balance - ? WHERE id = ?").run(old.amount, old.to_account_id);
+          }
         }
-      }
 
-      // 3. Update transaction
-      db.prepare(`
-        UPDATE transactions 
-        SET type = ?, amount = ?, date = ?, category_id = ?, account_id = ?, to_account_id = ?, notes = ?, status = ?, due_date = ?
-        WHERE id = ?
-      `).run(type, amount, date, category_id, account_id, to_account_id, notes, status || 'paid', due_date, id);
+        // 3. Update transaction
+        db.prepare(`
+          UPDATE transactions 
+          SET type = ?, amount = ?, date = ?, category_id = ?, account_id = ?, to_account_id = ?, notes = ?, status = ?, due_date = ?
+          WHERE id = ?
+        `).run(type, amount, date, category_id || null, account_id, to_account_id || null, notes || null, status || 'paid', due_date || null, id);
 
-      // 4. Apply new transaction's effect on balances if it is paid
-      if (status !== 'unpaid') {
-        if (type === 'income') {
-          db.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ?").run(amount, account_id);
-        } else if (type === 'expense' || type === 'due') {
-          db.prepare("UPDATE accounts SET balance = balance - ? WHERE id = ?").run(amount, account_id);
-        } else if (type === 'transfer') {
-          db.prepare("UPDATE accounts SET balance = balance - ? WHERE id = ?").run(amount, account_id);
-          db.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ?").run(amount, to_account_id);
+        // 4. Apply new transaction's effect on balances if it is paid
+        if (status !== 'unpaid') {
+          if (type === 'income') {
+            db.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ?").run(amount, account_id);
+          } else if (type === 'expense' || type === 'due') {
+            db.prepare("UPDATE accounts SET balance = balance - ? WHERE id = ?").run(amount, account_id);
+          } else if (type === 'transfer') {
+            db.prepare("UPDATE accounts SET balance = balance - ? WHERE id = ?").run(amount, account_id);
+            db.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ?").run(amount, to_account_id);
+          }
         }
+
+        return true;
+      });
+
+      const success = updateTransaction();
+      if (success) {
+        res.json({ success: true });
+      } else {
+        res.status(404).json({ error: "Transaction not found" });
       }
-
-      return true;
-    });
-
-    const success = updateTransaction();
-    if (success) {
-      res.json({ success: true });
-    } else {
-      res.status(404).json({ error: "Transaction not found" });
+    } catch (error) {
+      console.error("Error in PUT /api/transactions:", error);
+      res.status(500).json({ error: "Failed to update transaction" });
     }
   });
 
   app.delete("/api/transactions/:id", (req, res) => {
-    const { id } = req.params;
+    try {
+      const { id } = req.params;
 
-    const deleteTransaction = db.transaction(() => {
-      const old = db.prepare("SELECT * FROM transactions WHERE id = ?").get(id) as any;
-      if (!old) return false;
+      const deleteTransaction = db.transaction(() => {
+        const old = db.prepare("SELECT * FROM transactions WHERE id = ?").get(id) as any;
+        if (!old) return false;
 
-      if (old.status !== 'unpaid') {
-        if (old.type === 'income') {
-          db.prepare("UPDATE accounts SET balance = balance - ? WHERE id = ?").run(old.amount, old.account_id);
-        } else if (old.type === 'expense' || old.type === 'due') {
-          db.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ?").run(old.amount, old.account_id);
-        } else if (old.type === 'transfer') {
-          db.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ?").run(old.amount, old.account_id);
-          db.prepare("UPDATE accounts SET balance = balance - ? WHERE id = ?").run(old.amount, old.to_account_id);
+        if (old.status !== 'unpaid') {
+          if (old.type === 'income') {
+            db.prepare("UPDATE accounts SET balance = balance - ? WHERE id = ?").run(old.amount, old.account_id);
+          } else if (old.type === 'expense' || old.type === 'due') {
+            db.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ?").run(old.amount, old.account_id);
+          } else if (old.type === 'transfer') {
+            db.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ?").run(old.amount, old.account_id);
+            db.prepare("UPDATE accounts SET balance = balance - ? WHERE id = ?").run(old.amount, old.to_account_id);
+          }
         }
+
+        db.prepare("DELETE FROM transactions WHERE id = ?").run(id);
+        return true;
+      });
+
+      const success = deleteTransaction();
+      if (success) {
+        res.json({ success: true });
+      } else {
+        res.status(404).json({ error: "Transaction not found" });
       }
-
-      db.prepare("DELETE FROM transactions WHERE id = ?").run(id);
-      return true;
-    });
-
-    const success = deleteTransaction();
-    if (success) {
-      res.json({ success: true });
-    } else {
-      res.status(404).json({ error: "Transaction not found" });
+    } catch (error) {
+      console.error("Error in DELETE /api/transactions:", error);
+      res.status(500).json({ error: "Failed to delete transaction" });
     }
   });
 
   app.get("/api/budgets", (req, res) => {
-    const budgets = db.prepare(`
-      SELECT b.*, c.name as category_name, 
-      (SELECT SUM(amount) FROM transactions WHERE category_id = b.category_id AND status = 'paid' AND date LIKE ?) as spent
-      FROM budgets b
-      LEFT JOIN categories c ON b.category_id = c.id
-    `).all(`${new Date().toISOString().slice(0, 7)}%`);
-    res.json(budgets);
+    try {
+      const budgets = db.prepare(`
+        SELECT b.*, c.name as category_name, 
+        (SELECT SUM(amount) FROM transactions WHERE (category_id = b.category_id OR (category_id IS NULL AND b.category_id IS NULL)) AND status = 'paid' AND date LIKE ?) as spent
+        FROM budgets b
+        LEFT JOIN categories c ON b.category_id = c.id
+      `).all(`${new Date().toISOString().slice(0, 7)}%`);
+      res.json(budgets);
+    } catch (error) {
+      console.error("Error in /api/budgets:", error);
+      res.status(500).json({ error: "Failed to fetch budgets" });
+    }
   });
 
   app.post("/api/budgets", (req, res) => {
-    const { category_id, amount, period } = req.body;
-    const result = db.prepare("INSERT INTO budgets (category_id, amount, period) VALUES (?, ?, ?)").run(category_id, amount, period);
-    res.json({ id: result.lastInsertRowid });
+    try {
+      const { category_id, amount, period } = req.body;
+      const result = db.prepare("INSERT INTO budgets (category_id, amount, period) VALUES (?, ?, ?)").run(category_id || null, amount, period);
+      res.json({ id: result.lastInsertRowid });
+    } catch (error) {
+      console.error("Error in POST /api/budgets:", error);
+      res.status(500).json({ error: "Failed to add budget" });
+    }
   });
 
   app.get("/api/settings", (req, res) => {
-    const settings = db.prepare("SELECT * FROM settings").all();
-    const settingsObj = settings.reduce((acc: any, curr: any) => {
-      acc[curr.key] = curr.value;
-      return acc;
-    }, {});
-    res.json(settingsObj);
+    try {
+      const settings = db.prepare("SELECT * FROM settings").all();
+      const settingsObj = settings.reduce((acc: any, curr: any) => {
+        acc[curr.key] = curr.value;
+        return acc;
+      }, {});
+      res.json(settingsObj);
+    } catch (error) {
+      console.error("Error in GET /api/settings:", error);
+      res.status(500).json({ error: "Failed to fetch settings" });
+    }
   });
 
   app.post("/api/settings", (req, res) => {
-    const { key, value } = req.body;
-    db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)").run(key, value);
-    res.json({ success: true });
+    try {
+      const { key, value } = req.body;
+      db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)").run(key, value);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error in POST /api/settings:", error);
+      res.status(500).json({ error: "Failed to update setting" });
+    }
   });
 
   // Vite middleware for development

@@ -19,6 +19,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { cn, formatCurrency } from "./lib/utils";
 import { api } from "./services/api";
 import { Summary, Transaction, Account, Category, Budget } from "./types";
+import { translations, Language } from "./i18n/translations";
 
 // Components
 import Dashboard from "./components/Dashboard";
@@ -37,6 +38,9 @@ export default function App() {
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [currency, setCurrency] = useState("BDT");
+  const [language, setLanguage] = useState<Language>("en");
+
+  const t = translations[language];
 
   useEffect(() => {
     fetchSummary();
@@ -58,16 +62,19 @@ export default function App() {
       if (settings.currency) {
         setCurrency(settings.currency);
       }
+      if (settings.language) {
+        setLanguage(settings.language as Language);
+      }
     } catch (error) {
       console.error("Failed to fetch settings:", error);
     }
   };
 
   const navItems = [
-    { id: "dashboard", label: "Home", icon: LayoutDashboard },
-    { id: "transactions", label: "History", icon: ReceiptText },
-    { id: "budgets", label: "Budgets", icon: PieChart },
-    { id: "ai-chat", label: "AI", icon: MessageSquare },
+    { id: "dashboard", label: t.home, icon: LayoutDashboard },
+    { id: "transactions", label: t.history, icon: ReceiptText },
+    { id: "budgets", label: t.budgets, icon: PieChart },
+    { id: "ai-chat", label: t.ai, icon: MessageSquare },
   ];
 
   return (
@@ -99,7 +106,7 @@ export default function App() {
         <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
           <header className="mb-6">
             <h2 className="text-2xl font-bold capitalize">
-              {activeView === "more" ? "Menu" : activeView.replace("-", " ")}
+              {activeView === "more" ? t.menu : t[activeView as keyof typeof t] || activeView.replace("-", " ")}
             </h2>
           </header>
 
@@ -111,13 +118,13 @@ export default function App() {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
             >
-              {activeView === "dashboard" && <Dashboard summary={summary} onRefresh={fetchSummary} currency={currency} />}
-              {activeView === "transactions" && <Transactions currency={currency} />}
-              {activeView === "accounts" && <Accounts currency={currency} />}
-              {activeView === "categories" && <Categories />}
-              {activeView === "budgets" && <Budgets currency={currency} />}
-              {activeView === "ai-chat" && <AIChat />}
-              {activeView === "settings" && <SettingsView currentCurrency={currency} onCurrencyChange={setCurrency} />}
+              {activeView === "dashboard" && <Dashboard summary={summary} onRefresh={fetchSummary} currency={currency} language={language} />}
+              {activeView === "transactions" && <Transactions currency={currency} language={language} />}
+              {activeView === "accounts" && <Accounts currency={currency} language={language} />}
+              {activeView === "categories" && <Categories language={language} />}
+              {activeView === "budgets" && <Budgets currency={currency} language={language} />}
+              {activeView === "ai-chat" && <AIChat language={language} />}
+              {activeView === "settings" && <SettingsView currentCurrency={currency} onCurrencyChange={setCurrency} currentLanguage={language} onLanguageChange={setLanguage} />}
               {activeView === "more" && (
                 <div className="grid grid-cols-2 gap-4">
                   <button 
@@ -125,21 +132,21 @@ export default function App() {
                     className="p-6 bg-white rounded-2xl border border-black/5 shadow-sm flex flex-col items-center gap-3 hover:bg-zinc-50 transition-all"
                   >
                     <div className="p-3 bg-blue-50 text-blue-600 rounded-xl"><Wallet size={24} /></div>
-                    <span className="font-bold">Accounts</span>
+                    <span className="font-bold">{t.accounts}</span>
                   </button>
                   <button 
                     onClick={() => setActiveView("categories")}
                     className="p-6 bg-white rounded-2xl border border-black/5 shadow-sm flex flex-col items-center gap-3 hover:bg-zinc-50 transition-all"
                   >
                     <div className="p-3 bg-amber-50 text-amber-600 rounded-xl"><Tags size={24} /></div>
-                    <span className="font-bold">Categories</span>
+                    <span className="font-bold">{t.categories}</span>
                   </button>
                   <button 
                     onClick={() => setActiveView("settings")}
                     className="p-6 bg-white rounded-2xl border border-black/5 shadow-sm flex flex-col items-center gap-3 hover:bg-zinc-50 transition-all"
                   >
                     <div className="p-3 bg-zinc-50 text-zinc-600 rounded-xl"><Settings size={24} /></div>
-                    <span className="font-bold">Settings</span>
+                    <span className="font-bold">{t.settings}</span>
                   </button>
                 </div>
               )}
@@ -182,7 +189,7 @@ export default function App() {
             )}
           >
             <Menu size={22} className={activeView === "more" ? "scale-110" : ""} />
-            <span className="text-[10px] font-bold uppercase tracking-wider">More</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider">{t.more}</span>
           </button>
         </div>
       </nav>
@@ -197,9 +204,10 @@ export default function App() {
             className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full max-w-lg p-6 sm:p-8 relative"
           >
             <div className="w-12 h-1.5 bg-zinc-200 rounded-full mx-auto mb-6 sm:hidden" />
-            <h3 className="text-xl font-bold mb-6">Quick Transaction</h3>
+            <h3 className="text-xl font-bold mb-6">{t.quickTransaction}</h3>
             <TransactionForm 
               currency={currency}
+              language={language}
               onClose={() => {
                 setIsQuickAddOpen(false);
                 fetchSummary();

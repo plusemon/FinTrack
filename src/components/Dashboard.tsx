@@ -24,17 +24,21 @@ import {
 import { Summary, Transaction } from "../types";
 import { api } from "../services/api";
 import { formatCurrency, formatDate, cn } from "../lib/utils";
+import { translations, Language } from "../i18n/translations";
 
 interface DashboardProps {
   summary: Summary | null;
   onRefresh: () => void;
   currency: string;
+  language: Language;
 }
 
-export default function Dashboard({ summary, onRefresh, currency }: DashboardProps) {
+export default function Dashboard({ summary, onRefresh, currency, language }: DashboardProps) {
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
   const [categoryData, setCategoryData] = useState<any[]>([]);
+
+  const t = translations[language];
 
   useEffect(() => {
     fetchDashboardData();
@@ -88,7 +92,7 @@ export default function Dashboard({ summary, onRefresh, currency }: DashboardPro
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6">
         <div className="col-span-2 md:col-span-1">
           <SummaryCard 
-            title="Total Balance" 
+            title={t.totalBalance} 
             value={summary?.totalBalance || 0} 
             icon={Wallet} 
             color="emerald" 
@@ -96,7 +100,7 @@ export default function Dashboard({ summary, onRefresh, currency }: DashboardPro
           />
         </div>
         <SummaryCard 
-          title="Income" 
+          title={t.income} 
           value={summary?.monthlyIncome || 0} 
           icon={TrendingUp} 
           color="blue" 
@@ -104,7 +108,7 @@ export default function Dashboard({ summary, onRefresh, currency }: DashboardPro
           currency={currency}
         />
         <SummaryCard 
-          title="Expense" 
+          title={t.expense} 
           value={summary?.monthlyExpense || 0} 
           icon={TrendingDown} 
           color="amber" 
@@ -118,7 +122,7 @@ export default function Dashboard({ summary, onRefresh, currency }: DashboardPro
         <div className="bg-white p-6 rounded-2xl border border-black/5 shadow-sm">
           <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
             <TrendingUp size={20} className="text-emerald-600" />
-            Financial Trends
+            {t.trends}
           </h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -150,7 +154,7 @@ export default function Dashboard({ summary, onRefresh, currency }: DashboardPro
         <div className="bg-white p-6 rounded-2xl border border-black/5 shadow-sm">
           <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
             <PieChartIcon size={20} className="text-emerald-600" />
-            Spending by Category
+            {t.categoryDistribution}
           </h3>
           <div className="h-[300px] w-full flex items-center">
             <ResponsiveContainer width="100%" height="100%">
@@ -191,34 +195,34 @@ export default function Dashboard({ summary, onRefresh, currency }: DashboardPro
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-bold flex items-center gap-2">
             <Clock size={20} className="text-emerald-600" />
-            Recent Transactions
+            {t.recentTransactions}
           </h3>
-          <button className="text-emerald-600 text-sm font-medium hover:underline">View All</button>
+          <button className="text-emerald-600 text-sm font-medium hover:underline">{t.viewAll}</button>
         </div>
         <div className="space-y-4">
-          {recentTransactions.map((t) => (
-            <div key={t.id} className="flex items-center justify-between p-4 hover:bg-zinc-50 rounded-xl transition-colors border border-transparent hover:border-black/5">
+          {recentTransactions.map((tr) => (
+            <div key={tr.id} className="flex items-center justify-between p-4 hover:bg-zinc-50 rounded-xl transition-colors border border-transparent hover:border-black/5">
               <div className="flex items-center gap-4">
                 <div className={cn(
                   "p-3 rounded-xl",
-                  t.type === 'income' ? "bg-emerald-50 text-emerald-600" : 
-                  t.type === 'expense' ? "bg-red-50 text-red-600" : 
-                  t.type === 'due' ? "bg-amber-50 text-amber-600" : "bg-blue-50 text-blue-600"
+                  tr.type === 'income' ? "bg-emerald-50 text-emerald-600" : 
+                  tr.type === 'expense' ? "bg-red-50 text-red-600" : 
+                  tr.type === 'due' ? "bg-amber-50 text-amber-600" : "bg-blue-50 text-blue-600"
                 )}>
-                  {t.type === 'income' ? <ArrowDownLeft size={20} /> : 
-                   t.type === 'expense' ? <ArrowUpRight size={20} /> : 
-                   t.type === 'due' ? <Clock size={20} /> : <ArrowRightLeft size={20} />}
+                  {tr.type === 'income' ? <ArrowDownLeft size={20} /> : 
+                   tr.type === 'expense' ? <ArrowUpRight size={20} /> : 
+                   tr.type === 'due' ? <Clock size={20} /> : <ArrowRightLeft size={20} />}
                 </div>
                 <div>
-                  <p className="font-semibold">{t.category_name || (t.type === 'due' ? "Credit Purchase" : "Transfer")}</p>
+                  <p className="font-semibold">{tr.category_name || (tr.type === 'due' ? t.creditPurchase : t.transfer)}</p>
                   <p className="text-xs text-zinc-400">
-                    {formatDate(t.date)} • {t.account_name}
-                    {t.type === 'due' && (
+                    {formatDate(tr.date)} • {tr.account_name}
+                    {tr.type === 'due' && (
                       <span className={cn(
                         "ml-2 px-1.5 py-0.5 rounded-full text-[8px] font-bold uppercase",
-                        t.status === 'paid' ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                        tr.status === 'paid' ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
                       )}>
-                        {t.status}
+                        {tr.status === 'paid' ? t.paid : t.unpaid}
                       </span>
                     )}
                   </p>
@@ -226,16 +230,16 @@ export default function Dashboard({ summary, onRefresh, currency }: DashboardPro
               </div>
               <p className={cn(
                 "font-bold",
-                t.type === 'income' ? "text-emerald-600" : 
-                (t.type === 'expense' || t.type === 'due') ? "text-red-600" : "text-blue-600"
+                tr.type === 'income' ? "text-emerald-600" : 
+                (tr.type === 'expense' || tr.type === 'due') ? "text-red-600" : "text-blue-600"
               )}>
-                {(t.type === 'expense' || t.type === 'due') ? "-" : t.type === 'income' ? "+" : ""}{formatCurrency(t.amount, currency)}
+                {(tr.type === 'expense' || tr.type === 'due') ? "-" : tr.type === 'income' ? "+" : ""}{formatCurrency(tr.amount, currency)}
               </p>
             </div>
           ))}
           {recentTransactions.length === 0 && (
             <div className="text-center py-12 text-zinc-400">
-              No recent transactions found.
+              {t.noTransactions}
             </div>
           )}
         </div>
