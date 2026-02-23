@@ -1,0 +1,5 @@
+{
+  "name": "FinTrack AI",
+  "description": "A personal daily transaction and financial tracking application with AI-powered insights, budget management, and visual reporting.",
+  "requestFramePermissions": ["microphone"]
+}
