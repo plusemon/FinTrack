@@ -53,24 +53,24 @@ export default function Settings({ onCurrencyChange, currentCurrency, onLanguage
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl border border-black/5 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-black/5">
-          <h3 className="text-lg font-bold flex items-center gap-2">
-            <Globe size={20} className="text-emerald-600" />
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-black/5 dark:border-white/5 shadow-sm overflow-hidden transition-colors duration-300">
+        <div className="p-6 border-b border-black/5 dark:border-white/5">
+          <h3 className="text-lg font-bold flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
+            <Globe size={20} className="text-emerald-600 dark:text-emerald-400" />
             {t.regionalSettings}
           </h3>
         </div>
         <div className="p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-bold text-zinc-900">{t.currency}</p>
-              <p className="text-sm text-zinc-500">Choose your preferred currency for display</p>
+              <p className="font-bold text-zinc-900 dark:text-zinc-100">{t.currency}</p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">Choose your preferred currency for display</p>
             </div>
             <select
               value={currency}
               onChange={(e) => handleCurrencyChange(e.target.value)}
               disabled={isSaving}
-              className="bg-zinc-50 border border-black/5 rounded-xl px-4 py-2 font-medium outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+              className="bg-zinc-50 dark:bg-zinc-800 border border-black/5 dark:border-white/5 rounded-xl px-4 py-2 font-medium outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
             >
               {currencies.map((c) => (
                 <option key={c.code} value={c.code}>
@@ -80,16 +80,16 @@ export default function Settings({ onCurrencyChange, currentCurrency, onLanguage
             </select>
           </div>
 
-          <div className="flex items-center justify-between pt-4 border-t border-black/5">
+          <div className="flex items-center justify-between pt-4 border-t border-black/5 dark:border-white/5">
             <div>
-              <p className="font-bold text-zinc-900">{t.language}</p>
-              <p className="text-sm text-zinc-500">Choose your preferred language</p>
+              <p className="font-bold text-zinc-900 dark:text-zinc-100">{t.language}</p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">Choose your preferred language</p>
             </div>
             <select
               value={language}
               onChange={(e) => handleLanguageChange(e.target.value as Language)}
               disabled={isSaving}
-              className="bg-zinc-50 border border-black/5 rounded-xl px-4 py-2 font-medium outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+              className="bg-zinc-50 dark:bg-zinc-800 border border-black/5 dark:border-white/5 rounded-xl px-4 py-2 font-medium outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
             >
               <option value="en">English</option>
               <option value="bn">বাংলা (Bangla)</option>
@@ -98,51 +98,51 @@ export default function Settings({ onCurrencyChange, currentCurrency, onLanguage
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-black/5 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-black/5">
-          <h3 className="text-lg font-bold flex items-center gap-2">
-            <Bell size={20} className="text-emerald-600" />
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-black/5 dark:border-white/5 shadow-sm overflow-hidden transition-colors duration-300">
+        <div className="p-6 border-b border-black/5 dark:border-white/5">
+          <h3 className="text-lg font-bold flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
+            <Bell size={20} className="text-emerald-600 dark:text-emerald-400" />
             {t.notifications}
           </h3>
         </div>
         <div className="p-6 space-y-4">
           <div className="flex items-center justify-between opacity-50">
             <div>
-              <p className="font-bold text-zinc-900">{t.dailyReminders}</p>
-              <p className="text-sm text-zinc-500">Get notified to log your daily transactions</p>
+              <p className="font-bold text-zinc-900 dark:text-zinc-100">{t.dailyReminders}</p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">Get notified to log your daily transactions</p>
             </div>
-            <div className="w-12 h-6 bg-zinc-200 rounded-full relative">
-              <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm" />
+            <div className="w-12 h-6 bg-zinc-200 dark:bg-zinc-700 rounded-full relative">
+              <div className="absolute left-1 top-1 w-4 h-4 bg-white dark:bg-zinc-300 rounded-full shadow-sm" />
             </div>
           </div>
           <div className="flex items-center justify-between opacity-50">
             <div>
-              <p className="font-bold text-zinc-900">{t.budgetAlerts}</p>
-              <p className="text-sm text-zinc-500">Receive alerts when you exceed 80% of your budget</p>
+              <p className="font-bold text-zinc-900 dark:text-zinc-100">{t.budgetAlerts}</p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">Receive alerts when you exceed 80% of your budget</p>
             </div>
-            <div className="w-12 h-6 bg-emerald-500 rounded-full relative">
-              <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm" />
+            <div className="w-12 h-6 bg-emerald-500 dark:bg-emerald-600 rounded-full relative">
+              <div className="absolute right-1 top-1 w-4 h-4 bg-white dark:bg-zinc-300 rounded-full shadow-sm" />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-black/5 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-black/5">
-          <h3 className="text-lg font-bold flex items-center gap-2">
-            <Shield size={20} className="text-emerald-600" />
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-black/5 dark:border-white/5 shadow-sm overflow-hidden transition-colors duration-300">
+        <div className="p-6 border-b border-black/5 dark:border-white/5">
+          <h3 className="text-lg font-bold flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
+            <Shield size={20} className="text-emerald-600 dark:text-emerald-400" />
             {t.security}
           </h3>
         </div>
         <div className="p-6 space-y-4">
-          <button className="w-full flex items-center justify-between p-4 bg-zinc-50 rounded-xl hover:bg-zinc-100 transition-colors">
-            <span className="font-bold text-zinc-900">{t.changePin}</span>
-            <Info size={16} className="text-zinc-400" />
+          <button className="w-full flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors">
+            <span className="font-bold text-zinc-900 dark:text-zinc-100">{t.changePin}</span>
+            <Info size={16} className="text-zinc-400 dark:text-zinc-500" />
           </button>
-          <button className="w-full flex items-center justify-between p-4 bg-zinc-50 rounded-xl hover:bg-zinc-100 transition-colors">
-            <span className="font-bold text-zinc-900">{t.biometric}</span>
-            <div className="w-12 h-6 bg-emerald-500 rounded-full relative">
-              <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm" />
+          <button className="w-full flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors">
+            <span className="font-bold text-zinc-900 dark:text-zinc-100">{t.biometric}</span>
+            <div className="w-12 h-6 bg-emerald-500 dark:bg-emerald-600 rounded-full relative">
+              <div className="absolute right-1 top-1 w-4 h-4 bg-white dark:bg-zinc-300 rounded-full shadow-sm" />
             </div>
           </button>
         </div>

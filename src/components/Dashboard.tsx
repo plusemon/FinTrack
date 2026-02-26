@@ -25,18 +25,25 @@ import { Summary, Transaction } from "../types";
 import { api } from "../services/api";
 import { formatCurrency, formatDate, cn } from "../lib/utils";
 import { translations, Language } from "../i18n/translations";
+import TransactionDetails from "./TransactionDetails";
+import TransactionForm from "./TransactionForm";
+import { AnimatePresence, motion } from "motion/react";
+import { X } from "lucide-react";
 
 interface DashboardProps {
   summary: Summary | null;
   onRefresh: () => void;
   currency: string;
   language: Language;
+  onNavigate: (view: any) => void;
 }
 
-export default function Dashboard({ summary, onRefresh, currency, language }: DashboardProps) {
+export default function Dashboard({ summary, onRefresh, currency, language, onNavigate }: DashboardProps) {
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
   const [categoryData, setCategoryData] = useState<any[]>([]);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   const t = translations[language];
 
@@ -119,9 +126,9 @@ export default function Dashboard({ summary, onRefresh, currency, language }: Da
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Spending Trends */}
-        <div className="bg-white p-6 rounded-2xl border border-black/5 shadow-sm">
+        <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-black/5 dark:border-white/5 shadow-sm transition-colors duration-300">
           <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-            <TrendingUp size={20} className="text-emerald-600" />
+            <TrendingUp size={20} className="text-emerald-600 dark:text-emerald-500" />
             {t.trends}
           </h3>
           <div className="h-[300px] w-full">
@@ -151,9 +158,9 @@ export default function Dashboard({ summary, onRefresh, currency, language }: Da
         </div>
 
         {/* Category Distribution */}
-        <div className="bg-white p-6 rounded-2xl border border-black/5 shadow-sm">
+        <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-black/5 dark:border-white/5 shadow-sm transition-colors duration-300">
           <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-            <PieChartIcon size={20} className="text-emerald-600" />
+            <PieChartIcon size={20} className="text-emerald-600 dark:text-emerald-500" />
             {t.categoryDistribution}
           </h3>
           <div className="h-[300px] w-full flex items-center">
@@ -191,36 +198,45 @@ export default function Dashboard({ summary, onRefresh, currency, language }: Da
       </div>
 
       {/* Recent Transactions */}
-      <div className="bg-white p-6 rounded-2xl border border-black/5 shadow-sm">
+      <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-black/5 dark:border-white/5 shadow-sm transition-colors duration-300">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-bold flex items-center gap-2">
-            <Clock size={20} className="text-emerald-600" />
+            <Clock size={20} className="text-emerald-600 dark:text-emerald-500" />
             {t.recentTransactions}
           </h3>
-          <button className="text-emerald-600 text-sm font-medium hover:underline">{t.viewAll}</button>
+          <button 
+            onClick={() => onNavigate('transactions')}
+            className="text-emerald-600 dark:text-emerald-500 text-sm font-medium hover:underline"
+          >
+            {t.viewAll}
+          </button>
         </div>
         <div className="space-y-4">
           {recentTransactions.map((tr) => (
-            <div key={tr.id} className="flex items-center justify-between p-4 hover:bg-zinc-50 rounded-xl transition-colors border border-transparent hover:border-black/5">
+            <div 
+              key={tr.id} 
+              className="flex items-center justify-between p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 rounded-xl transition-colors border border-transparent hover:border-black/5 dark:hover:border-white/5 cursor-pointer"
+              onClick={() => setSelectedTransaction(tr)}
+            >
               <div className="flex items-center gap-4">
                 <div className={cn(
                   "p-3 rounded-xl",
-                  tr.type === 'income' ? "bg-emerald-50 text-emerald-600" : 
-                  tr.type === 'expense' ? "bg-red-50 text-red-600" : 
-                  tr.type === 'due' ? "bg-amber-50 text-amber-600" : "bg-blue-50 text-blue-600"
+                  tr.type === 'income' ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400" : 
+                  tr.type === 'expense' ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" : 
+                  tr.type === 'due' ? "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400" : "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
                 )}>
                   {tr.type === 'income' ? <ArrowDownLeft size={20} /> : 
                    tr.type === 'expense' ? <ArrowUpRight size={20} /> : 
                    tr.type === 'due' ? <Clock size={20} /> : <ArrowRightLeft size={20} />}
                 </div>
                 <div>
-                  <p className="font-semibold">{tr.category_name || (tr.type === 'due' ? t.creditPurchase : t.transfer)}</p>
-                  <p className="text-xs text-zinc-400">
+                  <p className="font-semibold text-zinc-900 dark:text-zinc-100">{tr.category_name || (tr.type === 'due' ? t.creditPurchase : t.transfer)}</p>
+                  <p className="text-xs text-zinc-400 dark:text-zinc-500">
                     {formatDate(tr.date)} • {tr.account_name}
                     {tr.type === 'due' && (
                       <span className={cn(
                         "ml-2 px-1.5 py-0.5 rounded-full text-[8px] font-bold uppercase",
-                        tr.status === 'paid' ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                        tr.status === 'paid' ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300" : "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300"
                       )}>
                         {tr.status === 'paid' ? t.paid : t.unpaid}
                       </span>
@@ -230,33 +246,89 @@ export default function Dashboard({ summary, onRefresh, currency, language }: Da
               </div>
               <p className={cn(
                 "font-bold",
-                tr.type === 'income' ? "text-emerald-600" : 
-                (tr.type === 'expense' || tr.type === 'due') ? "text-red-600" : "text-blue-600"
+                tr.type === 'income' ? "text-emerald-600 dark:text-emerald-400" : 
+                (tr.type === 'expense' || tr.type === 'due') ? "text-red-600 dark:text-red-400" : "text-blue-600 dark:text-blue-400"
               )}>
                 {(tr.type === 'expense' || tr.type === 'due') ? "-" : tr.type === 'income' ? "+" : ""}{formatCurrency(tr.amount, currency)}
               </p>
             </div>
           ))}
           {recentTransactions.length === 0 && (
-            <div className="text-center py-12 text-zinc-400">
+            <div className="text-center py-12 text-zinc-400 dark:text-zinc-600">
               {t.noTransactions}
             </div>
           )}
         </div>
       </div>
+
+      {/* Details Modal */}
+      <TransactionDetails 
+        transaction={selectedTransaction}
+        onClose={() => setSelectedTransaction(null)}
+        onEdit={(tr) => {
+          setEditingTransaction(tr);
+          setSelectedTransaction(null);
+        }}
+        onDelete={(id) => {
+          if (window.confirm(t.confirmDelete)) {
+            api.deleteTransaction(id).then(() => {
+              setSelectedTransaction(null);
+              fetchDashboardData();
+              onRefresh();
+            });
+          }
+        }}
+        currency={currency}
+        language={language}
+      />
+
+      {/* Edit Modal */}
+      <AnimatePresence>
+        {editingTransaction && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <motion.div 
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              className="bg-white dark:bg-zinc-900 rounded-t-3xl sm:rounded-2xl shadow-2xl w-full max-w-lg p-6 sm:p-8 relative transition-colors duration-300"
+            >
+              <div className="w-12 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full mx-auto mb-6 sm:hidden" />
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{t.editTransaction}</h3>
+                <button 
+                  onClick={() => setEditingTransaction(null)}
+                  className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full hidden sm:block"
+                >
+                  <X size={20} className="text-zinc-500" />
+                </button>
+              </div>
+              <TransactionForm 
+                currency={currency}
+                language={language}
+                transaction={editingTransaction}
+                onClose={() => {
+                  setEditingTransaction(null);
+                  fetchDashboardData();
+                  onRefresh();
+                }} 
+              />
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
 function SummaryCard({ title, value, icon: Icon, color, trend, currency }: any) {
   const colors: any = {
-    emerald: "bg-emerald-50 text-emerald-600",
-    blue: "bg-blue-50 text-blue-600",
-    amber: "bg-amber-50 text-amber-600",
+    emerald: "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400",
+    blue: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400",
+    amber: "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400",
   };
 
   return (
-    <div className="bg-white p-4 sm:p-6 rounded-2xl border border-black/5 shadow-sm">
+    <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl border border-black/5 dark:border-white/5 shadow-sm transition-colors duration-300">
       <div className="flex items-center justify-between mb-3 sm:mb-4">
         <div className={cn("p-2 sm:p-3 rounded-xl", colors[color])}>
           <Icon size={20} className="sm:w-6 sm:h-6" />
@@ -264,14 +336,14 @@ function SummaryCard({ title, value, icon: Icon, color, trend, currency }: any) 
         {trend && (
           <span className={cn(
             "text-[10px] sm:text-xs font-bold px-2 py-1 rounded-full",
-            trend.startsWith('+') ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+            trend.startsWith('+') ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300" : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
           )}>
             {trend}
           </span>
         )}
       </div>
-      <p className="text-zinc-500 text-xs sm:text-sm font-medium">{title}</p>
-      <p className="text-lg sm:text-2xl font-bold mt-1 tracking-tight">{formatCurrency(value, currency)}</p>
+      <p className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">{title}</p>
+      <p className="text-lg sm:text-2xl font-bold mt-1 tracking-tight text-zinc-900 dark:text-zinc-100">{formatCurrency(value, currency)}</p>
     </div>
   );
 }

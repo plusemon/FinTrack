@@ -8,6 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const db = new Database("fintrack.db");
+db.exec("PRAGMA foreign_keys = ON;");
 
 // Initialize Database
 db.exec(`
@@ -89,6 +90,11 @@ if (!currencySetting) {
   db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("currency", "BDT");
 }
 
+const themeSetting = db.prepare("SELECT * FROM settings WHERE key = ?").get("theme");
+if (!themeSetting) {
+  db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("theme", "light");
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -140,6 +146,49 @@ async function startServer() {
     }
   });
 
+  app.put("/api/accounts/:id", (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, type, balance, icon, color } = req.body;
+      db.prepare("UPDATE accounts SET name = ?, type = ?, balance = ?, icon = ?, color = ? WHERE id = ?").run(name, type, balance, icon, color, id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error in PUT /api/accounts:", error);
+      res.status(500).json({ error: "Failed to update account" });
+    }
+  });
+
+  app.delete("/api/accounts/:id", (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Check if account has transactions
+      const transactions = db.prepare("SELECT COUNT(*) as count FROM transactions WHERE account_id = ? OR to_account_id = ?").get(id, id) as { count: number };
+      if (transactions.count > 0) {
+        return res.status(400).json({ 
+          error: `Cannot delete account with ${transactions.count} transactions. Please delete the transactions first or transfer them to another account.` 
+        });
+      }
+
+      // Check if account has recurring transactions
+      const recurring = db.prepare("SELECT COUNT(*) as count FROM recurring_transactions WHERE account_id = ?").get(id) as { count: number };
+      if (recurring.count > 0) {
+        return res.status(400).json({ 
+          error: `Cannot delete account with ${recurring.count} recurring transactions.` 
+        });
+      }
+
+      const result = db.prepare("DELETE FROM accounts WHERE id = ?").run(id);
+      if (result.changes === 0) {
+        return res.status(404).json({ error: "Account not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error in DELETE /api/accounts:", error);
+      res.status(500).json({ error: error.message || "Failed to delete account" });
+    }
+  });
+
   app.get("/api/categories", (req, res) => {
     try {
       const categories = db.prepare("SELECT * FROM categories").all();
@@ -158,6 +207,35 @@ async function startServer() {
     } catch (error) {
       console.error("Error in POST /api/categories:", error);
       res.status(500).json({ error: "Failed to add category" });
+    }
+  });
+
+  app.put("/api/categories/:id", (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, parent_id, type, icon, color } = req.body;
+      db.prepare("UPDATE categories SET name = ?, parent_id = ?, type = ?, icon = ?, color = ? WHERE id = ?").run(name, parent_id, type, icon, color, id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error in PUT /api/categories:", error);
+      res.status(500).json({ error: "Failed to update category" });
+    }
+  });
+
+  app.delete("/api/categories/:id", (req, res) => {
+    try {
+      const { id } = req.params;
+      // Check if category has transactions or subcategories
+      const transactions = db.prepare("SELECT COUNT(*) as count FROM transactions WHERE category_id = ?").get(id) as { count: number };
+      const subcategories = db.prepare("SELECT COUNT(*) as count FROM categories WHERE parent_id = ?").get(id) as { count: number };
+      if (transactions.count > 0 || subcategories.count > 0) {
+        return res.status(400).json({ error: "Cannot delete category with transactions or subcategories" });
+      }
+      db.prepare("DELETE FROM categories WHERE id = ?").run(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error in DELETE /api/categories:", error);
+      res.status(500).json({ error: "Failed to delete category" });
     }
   });
 
@@ -340,6 +418,29 @@ async function startServer() {
     } catch (error) {
       console.error("Error in POST /api/budgets:", error);
       res.status(500).json({ error: "Failed to add budget" });
+    }
+  });
+
+  app.put("/api/budgets/:id", (req, res) => {
+    try {
+      const { id } = req.params;
+      const { category_id, amount, period } = req.body;
+      db.prepare("UPDATE budgets SET category_id = ?, amount = ?, period = ? WHERE id = ?").run(category_id || null, amount, period, id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error in PUT /api/budgets:", error);
+      res.status(500).json({ error: "Failed to update budget" });
+    }
+  });
+
+  app.delete("/api/budgets/:id", (req, res) => {
+    try {
+      const { id } = req.params;
+      db.prepare("DELETE FROM budgets WHERE id = ?").run(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error in DELETE /api/budgets:", error);
+      res.status(500).json({ error: "Failed to delete budget" });
     }
   });
 

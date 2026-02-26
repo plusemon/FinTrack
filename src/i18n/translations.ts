@@ -51,6 +51,9 @@ export const translations = {
     editTransaction: "Edit Transaction",
     markAsPaid: "Mark as Paid",
     confirmDelete: "Are you sure you want to delete this transaction?",
+    confirmDeleteAccount: "Are you sure you want to delete this account? All transaction history for this account will be checked first.",
+    confirmDeleteCategory: "Are you sure you want to delete this category?",
+    confirmDeleteBudget: "Are you sure you want to delete this budget?",
     selectAccount: "Select Account",
     selectCategory: "Select Category",
     selectDestination: "Select Destination Account",
@@ -112,7 +115,18 @@ export const translations = {
     aiNoResponse: "I'm sorry, I couldn't process that.",
     aiImageError: "Failed to generate image. Please try a different prompt.",
     aiImagePrompt: "Generate a financial visualization for: ",
-    "ai-chat": "AI Assistant"
+    "ai-chat": "AI Assistant",
+    transactionDetails: "Transaction Details",
+    transactions: "Transactions",
+    editAccount: "Edit Account",
+    editBudget: "Edit Budget",
+    editCategory: "Edit Category",
+    viewAndManageTransactions: "View and manage all your transactions",
+    searchTransactions: "Search transactions...",
+    allTypes: "All Types",
+    theme: "Theme",
+    light: "Light",
+    dark: "Dark"
   },
   bn: {
     dashboard: "ড্যাশবোর্ড",
@@ -166,6 +180,9 @@ export const translations = {
     editTransaction: "লেনদেন এডিট করুন",
     markAsPaid: "পরিশোধিত হিসেবে চিহ্নিত করুন",
     confirmDelete: "আপনি কি নিশ্চিত যে আপনি এই লেনদেনটি মুছে ফেলতে চান?",
+    confirmDeleteAccount: "আপনি কি নিশ্চিত যে আপনি এই অ্যাকাউন্টটি মুছে ফেলতে চান? এই অ্যাকাউন্টের সমস্ত লেনদেনের ইতিহাস প্রথমে পরীক্ষা করা হবে।",
+    confirmDeleteCategory: "আপনি কি নিশ্চিত যে আপনি এই ক্যাটাগরিটি মুছে ফেলতে চান?",
+    confirmDeleteBudget: "আপনি কি নিশ্চিত যে আপনি এই বাজেটটি মুছে ফেলতে চান?",
     selectAccount: "অ্যাকাউন্ট নির্বাচন করুন",
     selectCategory: "ক্যাটাগরি নির্বাচন করুন",
     selectDestination: "গন্তব্য অ্যাকাউন্ট নির্বাচন করুন",
@@ -227,7 +244,18 @@ export const translations = {
     aiNoResponse: "দুঃখিত, আমি এটি প্রক্রিয়া করতে পারিনি।",
     aiImageError: "ছবি তৈরি করতে ব্যর্থ হয়েছে। দয়া করে অন্য একটি প্রম্পট চেষ্টা করুন।",
     aiImagePrompt: "এর জন্য একটি আর্থিক ভিজ্যুয়ালাইজেশন তৈরি করুন: ",
-    "ai-chat": "এআই সহকারী"
+    "ai-chat": "এআই সহকারী",
+    transactionDetails: "লেনদেনের বিবরণ",
+    transactions: "লেনদেন",
+    editAccount: "অ্যাকাউন্ট সম্পাদনা",
+    editBudget: "বাজেট সম্পাদনা",
+    editCategory: "ক্যাটাগরি সম্পাদনা",
+    viewAndManageTransactions: "আপনার সমস্ত লেনদেন দেখুন এবং পরিচালনা করুন",
+    searchTransactions: "লেনদেন খুঁজুন...",
+    allTypes: "সব ধরন",
+    theme: "থিম",
+    light: "লাইট",
+    dark: "ডার্ক"
   }
 };
 

@@ -1,5 +1,13 @@
 import { Summary, Account, Category, Transaction, Budget } from "../types";
 
+const handleResponse = async (res: Response) => {
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || "Something went wrong");
+  }
+  return data;
+};
+
 export const api = {
   async getSummary(): Promise<Summary> {
     const res = await fetch("/api/summary");
@@ -17,7 +25,23 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(account),
     });
-    return res.json();
+    return handleResponse(res);
+  },
+
+  async updateAccount(id: number, account: Omit<Account, "id">): Promise<{ success: boolean }> {
+    const res = await fetch(`/api/accounts/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(account),
+    });
+    return handleResponse(res);
+  },
+
+  async deleteAccount(id: number): Promise<{ success: boolean }> {
+    const res = await fetch(`/api/accounts/${id}`, {
+      method: "DELETE",
+    });
+    return handleResponse(res);
   },
 
   async getCategories(): Promise<Category[]> {
@@ -31,7 +55,23 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(category),
     });
-    return res.json();
+    return handleResponse(res);
+  },
+
+  async updateCategory(id: number, category: Omit<Category, "id">): Promise<{ success: boolean }> {
+    const res = await fetch(`/api/categories/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(category),
+    });
+    return handleResponse(res);
+  },
+
+  async deleteCategory(id: number): Promise<{ success: boolean }> {
+    const res = await fetch(`/api/categories/${id}`, {
+      method: "DELETE",
+    });
+    return handleResponse(res);
   },
 
   async getTransactions(filters: any = {}): Promise<Transaction[]> {
@@ -46,7 +86,7 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(transaction),
     });
-    return res.json();
+    return handleResponse(res);
   },
 
   async updateTransaction(id: number, transaction: Omit<Transaction, "id">): Promise<{ success: boolean }> {
@@ -55,14 +95,14 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(transaction),
     });
-    return res.json();
+    return handleResponse(res);
   },
 
   async deleteTransaction(id: number): Promise<{ success: boolean }> {
     const res = await fetch(`/api/transactions/${id}`, {
       method: "DELETE",
     });
-    return res.json();
+    return handleResponse(res);
   },
 
   async getBudgets(): Promise<Budget[]> {
@@ -76,7 +116,23 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(budget),
     });
-    return res.json();
+    return handleResponse(res);
+  },
+
+  async updateBudget(id: number, budget: Omit<Budget, "id" | "spent">): Promise<{ success: boolean }> {
+    const res = await fetch(`/api/budgets/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(budget),
+    });
+    return handleResponse(res);
+  },
+
+  async deleteBudget(id: number): Promise<{ success: boolean }> {
+    const res = await fetch(`/api/budgets/${id}`, {
+      method: "DELETE",
+    });
+    return handleResponse(res);
   },
 
   async getSettings(): Promise<Record<string, string>> {
@@ -90,6 +146,6 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ key, value }),
     });
-    return res.json();
+    return handleResponse(res);
   },
 };

@@ -75,7 +75,7 @@ export default function TransactionForm({ onClose, currency, language, transacti
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="flex bg-zinc-100 p-1 rounded-xl overflow-x-auto no-scrollbar">
+      <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl overflow-x-auto no-scrollbar transition-colors duration-300">
         {(["expense", "income", "transfer", "due"] as const).map((typeKey) => (
           <button
             key={typeKey}
@@ -87,7 +87,7 @@ export default function TransactionForm({ onClose, currency, language, transacti
             }}
             className={cn(
               "flex-1 py-2 px-3 rounded-lg text-sm font-medium capitalize transition-all whitespace-nowrap",
-              type === typeKey ? "bg-white shadow-sm text-emerald-600" : "text-zinc-500"
+              type === typeKey ? "bg-white dark:bg-zinc-700 shadow-sm text-emerald-600 dark:text-emerald-400" : "text-zinc-500 dark:text-zinc-400"
             )}
           >
             {t[typeKey as keyof typeof t] || typeKey}
@@ -97,23 +97,23 @@ export default function TransactionForm({ onClose, currency, language, transacti
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1">
-          <label className="text-xs font-semibold text-zinc-500 uppercase">{t.amount}</label>
+          <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase">{t.amount}</label>
           <input
             type="number"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
-            className="w-full p-3 bg-zinc-50 border border-black/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+            className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 dark:border-white/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-zinc-900 dark:text-zinc-100"
             required
           />
         </div>
         <div className="space-y-1">
-          <label className="text-xs font-semibold text-zinc-500 uppercase">{t.date}</label>
+          <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase">{t.date}</label>
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full p-3 bg-zinc-50 border border-black/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+            className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 dark:border-white/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-zinc-900 dark:text-zinc-100"
             required
           />
         </div>
@@ -122,23 +122,23 @@ export default function TransactionForm({ onClose, currency, language, transacti
       {type === 'due' && (
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-zinc-500 uppercase">{t.status}</label>
+            <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase">{t.status}</label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as "paid" | "unpaid")}
-              className="w-full p-3 bg-zinc-50 border border-black/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+              className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 dark:border-white/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-zinc-900 dark:text-zinc-100"
             >
               <option value="unpaid">{t.unpaid}</option>
               <option value="paid">{t.paid}</option>
             </select>
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-zinc-500 uppercase">{t.dueDate}</label>
+            <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase">{t.dueDate}</label>
             <input
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="w-full p-3 bg-zinc-50 border border-black/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+              className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 dark:border-white/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-zinc-900 dark:text-zinc-100"
               required={type === 'due'}
             />
           </div>
@@ -146,11 +146,11 @@ export default function TransactionForm({ onClose, currency, language, transacti
       )}
 
       <div className="space-y-1">
-        <label className="text-xs font-semibold text-zinc-500 uppercase">{t.account}</label>
+        <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase">{t.account}</label>
         <select
           value={accountId}
           onChange={(e) => setAccountId(e.target.value)}
-          className="w-full p-3 bg-zinc-50 border border-black/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+          className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 dark:border-white/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-zinc-900 dark:text-zinc-100"
           required
         >
           <option value="">{t.selectAccount}</option>
@@ -160,11 +160,11 @@ export default function TransactionForm({ onClose, currency, language, transacti
 
       {type === 'transfer' ? (
         <div className="space-y-1">
-          <label className="text-xs font-semibold text-zinc-500 uppercase">{t.selectDestination}</label>
+          <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase">{t.selectDestination}</label>
           <select
             value={toAccountId}
             onChange={(e) => setToAccountId(e.target.value)}
-            className="w-full p-3 bg-zinc-50 border border-black/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+            className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 dark:border-white/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-zinc-900 dark:text-zinc-100"
             required
           >
             <option value="">{t.selectDestination}</option>
@@ -175,11 +175,11 @@ export default function TransactionForm({ onClose, currency, language, transacti
         </div>
       ) : (
         <div className="space-y-1">
-          <label className="text-xs font-semibold text-zinc-500 uppercase">{t.category}</label>
+          <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase">{t.category}</label>
           <select
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
-            className="w-full p-3 bg-zinc-50 border border-black/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+            className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 dark:border-white/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-zinc-900 dark:text-zinc-100"
             required
           >
             <option value="">{t.selectCategory}</option>
@@ -191,12 +191,12 @@ export default function TransactionForm({ onClose, currency, language, transacti
       )}
 
       <div className="space-y-1">
-        <label className="text-xs font-semibold text-zinc-500 uppercase">{t.notes}</label>
+        <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase">{t.notes}</label>
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Optional notes..."
-          className="w-full p-3 bg-zinc-50 border border-black/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none h-20 resize-none"
+          className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 dark:border-white/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none h-20 resize-none text-zinc-900 dark:text-zinc-100"
         />
       </div>
 
@@ -204,7 +204,7 @@ export default function TransactionForm({ onClose, currency, language, transacti
         <button
           type="button"
           onClick={onClose}
-          className="flex-1 py-4 border border-black/5 rounded-xl font-bold text-zinc-500 hover:bg-zinc-50 transition-all"
+          className="flex-1 py-4 border border-black/5 dark:border-white/5 rounded-xl font-bold text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all"
         >
           {t.cancel}
         </button>
@@ -212,7 +212,7 @@ export default function TransactionForm({ onClose, currency, language, transacti
           <button
             type="button"
             onClick={handleDelete}
-            className="flex-1 py-4 bg-red-50 text-red-600 font-bold rounded-xl hover:bg-red-100 transition-all"
+            className="flex-1 py-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-bold rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 transition-all"
           >
             {t.delete}
           </button>
