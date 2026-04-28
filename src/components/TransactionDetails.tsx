@@ -105,7 +105,7 @@ export default function TransactionDetails({
                 )}
               </div>
 
-              <div className="flex gap-3 pt-6 border-t border-black/5 dark:border-white/5">
+              <div className="flex gap-3 pt-6 border-t border-zinc-200 dark:border-white/5">
                 <button
                   onClick={() => onEdit(transaction)}
                   className="flex-1 flex items-center justify-center gap-2 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-xl font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"

@@ -21,6 +21,8 @@ import { formatCurrency, formatDate, cn } from "../lib/utils";
 import { translations, Language } from "../i18n/translations";
 import TransactionDetails from "./TransactionDetails";
 import TransactionForm from "./TransactionForm";
+import ConfirmDialog from "./ui/ConfirmDialog";
+import Toast, { ToastType } from "./ui/Toast";
 import { AnimatePresence, motion } from "motion/react";
 import { X } from "lucide-react";
 
@@ -38,8 +40,14 @@ export default function Transactions({ currency, language }: TransactionsProps) 
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [toast, setToast] = useState<{ message: string, type: ToastType } | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
   const t = translations[language];
+
+  const showToast = (message: string, type: ToastType = "success") => {
+    setToast({ message, type });
+  };
 
   useEffect(() => {
     fetchData();
@@ -80,14 +88,14 @@ export default function Transactions({ currency, language }: TransactionsProps) 
               placeholder={t.searchTransactions}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
+              className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/5 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
             />
           </div>
           <div className="flex items-center gap-2">
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-medium text-zinc-600 dark:text-zinc-400 transition-all"
+              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/5 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-medium text-zinc-600 dark:text-zinc-400 transition-all"
             >
               <option value="all">{t.allTypes}</option>
               <option value="income">{t.income}</option>
@@ -98,7 +106,7 @@ export default function Transactions({ currency, language }: TransactionsProps) 
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-medium text-zinc-600 dark:text-zinc-400 transition-all"
+              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/5 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-medium text-zinc-600 dark:text-zinc-400 transition-all"
             >
               <option value="all">{t.allCategories}</option>
               {categories.map(c => (
@@ -110,12 +118,12 @@ export default function Transactions({ currency, language }: TransactionsProps) 
       </div>
 
       {/* Transactions Table / List */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-black/5 dark:border-white/5 shadow-sm overflow-hidden transition-colors duration-300">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/5 shadow-sm overflow-hidden transition-colors duration-300">
         {/* Desktop Table */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-zinc-50 dark:bg-zinc-800/50 border-b border-black/5 dark:border-white/5">
+              <tr className="bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-white/5">
                 <th className="px-6 py-4 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">{t.date}</th>
                 <th className="px-6 py-4 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">{t.category}</th>
                 <th className="px-6 py-4 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">{t.account}</th>
@@ -128,7 +136,7 @@ export default function Transactions({ currency, language }: TransactionsProps) 
               {filteredTransactions.map((tr) => (
                 <tr 
                   key={tr.id} 
-                  className="hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors group cursor-pointer"
+                  className="hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors group cursor-pointer border-b border-zinc-100 dark:border-white/5 last:border-0"
                   onClick={() => setSelectedTransaction(tr)}
                 >
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-600 dark:text-zinc-400">{formatDate(tr.date)}</td>
@@ -189,9 +197,7 @@ export default function Transactions({ currency, language }: TransactionsProps) 
                       <button 
                         onClick={(e) => { 
                           e.stopPropagation(); 
-                          if (window.confirm(t.confirmDelete)) {
-                            api.deleteTransaction(tr.id).then(fetchData);
-                          }
+                          setConfirmDeleteId(tr.id);
                         }}
                         className="p-2 text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                       >
@@ -268,9 +274,7 @@ export default function Transactions({ currency, language }: TransactionsProps) 
                   <button 
                     onClick={(e) => { 
                       e.stopPropagation(); 
-                      if (window.confirm(t.confirmDelete)) {
-                        api.deleteTransaction(tr.id).then(fetchData);
-                      }
+                      setConfirmDeleteId(tr.id);
                     }}
                     className="p-1 text-zinc-300 dark:text-zinc-600 hover:text-red-600 dark:hover:text-red-400"
                   >
@@ -301,12 +305,7 @@ export default function Transactions({ currency, language }: TransactionsProps) 
           setSelectedTransaction(null);
         }}
         onDelete={(id) => {
-          if (window.confirm(t.confirmDelete)) {
-            api.deleteTransaction(id).then(() => {
-              setSelectedTransaction(null);
-              fetchData();
-            });
-          }
+          setConfirmDeleteId(id);
         }}
         currency={currency}
         language={language}
@@ -345,6 +344,36 @@ export default function Transactions({ currency, language }: TransactionsProps) 
           </div>
         )}
       </AnimatePresence>
+
+      <ConfirmDialog 
+        isOpen={confirmDeleteId !== null}
+        title={t.deleteTransaction || "Delete Transaction"}
+        message={t.confirmDelete || "Are you sure you want to delete this transaction?"}
+        confirmText={t.delete}
+        cancelText={t.cancel}
+        onConfirm={async () => {
+          if (confirmDeleteId) {
+            try {
+              await api.deleteTransaction(confirmDeleteId);
+              showToast(t.transactionDeleted || "Transaction deleted successfully");
+              setConfirmDeleteId(null);
+              setSelectedTransaction(null);
+              fetchData();
+            } catch (error: any) {
+              showToast(error.message || "Failed to delete transaction", "error");
+            }
+          }
+        }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
+
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
+      )}
     </div>
   );
 }

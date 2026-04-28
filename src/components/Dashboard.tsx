@@ -126,7 +126,7 @@ export default function Dashboard({ summary, onRefresh, currency, language, onNa
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Spending Trends */}
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-black/5 dark:border-white/5 shadow-sm transition-colors duration-300">
+        <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-white/5 shadow-sm transition-colors duration-300">
           <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
             <TrendingUp size={20} className="text-emerald-600 dark:text-emerald-500" />
             {t.trends}
@@ -144,11 +144,18 @@ export default function Dashboard({ summary, onRefresh, currency, language, onNa
                     <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-zinc-100 dark:text-zinc-800" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'currentColor' }} className="text-zinc-400 dark:text-zinc-500" />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'currentColor' }} className="text-zinc-400 dark:text-zinc-500" />
                 <Tooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  contentStyle={{ 
+                    borderRadius: '12px', 
+                    border: '1px solid var(--tooltip-border)', 
+                    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                    backgroundColor: 'var(--tooltip-bg)',
+                    color: 'var(--tooltip-text)'
+                  }}
+                  itemStyle={{ color: 'inherit' }}
                 />
                 <Area type="monotone" dataKey="income" stroke="#10b981" fillOpacity={1} fill="url(#colorIncome)" strokeWidth={2} />
                 <Area type="monotone" dataKey="expense" stroke="#ef4444" fillOpacity={1} fill="url(#colorExpense)" strokeWidth={2} />
@@ -158,7 +165,7 @@ export default function Dashboard({ summary, onRefresh, currency, language, onNa
         </div>
 
         {/* Category Distribution */}
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-black/5 dark:border-white/5 shadow-sm transition-colors duration-300">
+        <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-white/5 shadow-sm transition-colors duration-300">
           <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
             <PieChartIcon size={20} className="text-emerald-600 dark:text-emerald-500" />
             {t.categoryDistribution}
@@ -179,7 +186,16 @@ export default function Dashboard({ summary, onRefresh, currency, language, onNa
                     <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip 
+                  contentStyle={{ 
+                    borderRadius: '12px', 
+                    border: '1px solid var(--tooltip-border)', 
+                    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                    backgroundColor: 'var(--tooltip-bg)',
+                    color: 'var(--tooltip-text)'
+                  }}
+                  itemStyle={{ color: 'inherit' }}
+                />
               </PieChart>
             </ResponsiveContainer>
             <div className="w-1/2 space-y-2">
@@ -187,9 +203,9 @@ export default function Dashboard({ summary, onRefresh, currency, language, onNa
                 <div key={i} className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span className="text-zinc-600">{item.name}</span>
+                    <span className="text-zinc-600 dark:text-zinc-400">{item.name}</span>
                   </div>
-                  <span className="font-medium">{formatCurrency(item.value, currency)}</span>
+                  <span className="font-medium text-zinc-900 dark:text-zinc-100">{formatCurrency(item.value, currency)}</span>
                 </div>
               ))}
             </div>
@@ -198,7 +214,7 @@ export default function Dashboard({ summary, onRefresh, currency, language, onNa
       </div>
 
       {/* Recent Transactions */}
-      <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-black/5 dark:border-white/5 shadow-sm transition-colors duration-300">
+      <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-white/5 shadow-sm transition-colors duration-300">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-bold flex items-center gap-2">
             <Clock size={20} className="text-emerald-600 dark:text-emerald-500" />
@@ -215,7 +231,7 @@ export default function Dashboard({ summary, onRefresh, currency, language, onNa
           {recentTransactions.map((tr) => (
             <div 
               key={tr.id} 
-              className="flex items-center justify-between p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 rounded-xl transition-colors border border-transparent hover:border-black/5 dark:hover:border-white/5 cursor-pointer"
+              className="flex items-center justify-between p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 rounded-xl transition-colors border border-transparent hover:border-zinc-200 dark:hover:border-white/5 cursor-pointer"
               onClick={() => setSelectedTransaction(tr)}
             >
               <div className="flex items-center gap-4">
@@ -328,7 +344,7 @@ function SummaryCard({ title, value, icon: Icon, color, trend, currency }: any) 
   };
 
   return (
-    <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl border border-black/5 dark:border-white/5 shadow-sm transition-colors duration-300">
+    <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl border border-zinc-200 dark:border-white/5 shadow-sm transition-colors duration-300">
       <div className="flex items-center justify-between mb-3 sm:mb-4">
         <div className={cn("p-2 sm:p-3 rounded-xl", colors[color])}>
           <Icon size={20} className="sm:w-6 sm:h-6" />

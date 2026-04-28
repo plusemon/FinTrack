@@ -109,7 +109,7 @@ export default function App() {
       {/* Header */}
       <header className={cn(
         "h-16 border-b flex items-center justify-between px-6 shrink-0 z-10 transition-colors duration-300",
-        theme === "dark" ? "bg-zinc-900 border-white/5" : "bg-white border-black/5"
+        theme === "dark" ? "bg-zinc-900 border-white/5" : "bg-white border-zinc-200"
       )}>
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white">
@@ -137,7 +137,7 @@ export default function App() {
             <Bell size={20} />
             <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-zinc-900"></span>
           </button>
-          <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 border border-black/5 dark:border-white/5 overflow-hidden">
+          <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 overflow-hidden">
             <img src="https://picsum.photos/seed/user/100/100" alt="User" referrerPolicy="no-referrer" />
           </div>
         </div>
@@ -173,7 +173,7 @@ export default function App() {
                     onClick={() => setActiveView("accounts")}
                     className={cn(
                       "p-6 rounded-2xl border shadow-sm flex flex-col items-center gap-3 transition-all",
-                      theme === "dark" ? "bg-zinc-900 border-white/5 hover:bg-zinc-800" : "bg-white border-black/5 hover:bg-zinc-50"
+                      theme === "dark" ? "bg-zinc-900 border-white/5 hover:bg-zinc-800" : "bg-white border-zinc-200 hover:bg-zinc-50"
                     )}
                   >
                     <div className="p-3 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl"><Wallet size={24} /></div>
@@ -183,7 +183,7 @@ export default function App() {
                     onClick={() => setActiveView("categories")}
                     className={cn(
                       "p-6 rounded-2xl border shadow-sm flex flex-col items-center gap-3 transition-all",
-                      theme === "dark" ? "bg-zinc-900 border-white/5 hover:bg-zinc-800" : "bg-white border-black/5 hover:bg-zinc-50"
+                      theme === "dark" ? "bg-zinc-900 border-white/5 hover:bg-zinc-800" : "bg-white border-zinc-200 hover:bg-zinc-50"
                     )}
                   >
                     <div className="p-3 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-xl"><Tags size={24} /></div>
@@ -193,7 +193,7 @@ export default function App() {
                     onClick={() => setActiveView("settings")}
                     className={cn(
                       "p-6 rounded-2xl border shadow-sm flex flex-col items-center gap-3 transition-all",
-                      theme === "dark" ? "bg-zinc-900 border-white/5 hover:bg-zinc-800" : "bg-white border-black/5 hover:bg-zinc-50"
+                      theme === "dark" ? "bg-zinc-900 border-white/5 hover:bg-zinc-800" : "bg-white border-zinc-200 hover:bg-zinc-50"
                     )}
                   >
                     <div className="p-3 bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl"><Settings size={24} /></div>
@@ -217,7 +217,7 @@ export default function App() {
       {/* Bottom Navigation */}
       <nav className={cn(
         "fixed bottom-0 left-0 right-0 border-t px-4 pb-safe pt-2 z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.03)] transition-colors duration-300",
-        theme === "dark" ? "bg-zinc-900 border-white/5" : "bg-white border-black/5"
+        theme === "dark" ? "bg-zinc-900 border-white/5" : "bg-white border-zinc-200"
       )}>
         <div className="max-w-md mx-auto flex items-center justify-between h-16">
           {navItems.map((item) => (

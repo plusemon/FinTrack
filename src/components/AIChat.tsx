@@ -102,9 +102,9 @@ export default function AIChat({ language }: AIChatProps) {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-12rem)] bg-white dark:bg-zinc-900 rounded-2xl border border-black/5 dark:border-white/5 shadow-sm overflow-hidden transition-colors duration-300">
+    <div className="flex flex-col h-[calc(100vh-12rem)] bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/5 shadow-sm overflow-hidden transition-colors duration-300">
       {/* Chat Header */}
-      <div className="p-4 border-b border-black/5 dark:border-white/5 bg-zinc-50 dark:bg-zinc-800/50 flex items-center justify-between">
+      <div className="p-4 border-b border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-zinc-800/50 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-sm">
             <Bot size={24} />
@@ -121,7 +121,7 @@ export default function AIChat({ language }: AIChatProps) {
           <select 
             value={imageSize} 
             onChange={(e) => setImageSize(e.target.value as any)}
-            className="text-xs font-bold bg-white dark:bg-zinc-800 border border-black/5 dark:border-white/5 rounded-lg px-2 py-1 outline-none text-zinc-900 dark:text-zinc-100"
+            className="text-xs font-bold bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 rounded-lg px-2 py-1 outline-none text-zinc-900 dark:text-zinc-100"
           >
             <option value="1K">1K</option>
             <option value="2K">2K</option>
@@ -158,7 +158,7 @@ export default function AIChat({ language }: AIChatProps) {
                   "p-4 rounded-2xl shadow-sm",
                   msg.role === "user" 
                     ? "bg-emerald-600 text-white rounded-tr-none" 
-                    : "bg-zinc-50 dark:bg-zinc-800 border border-black/5 dark:border-white/5 text-zinc-800 dark:text-zinc-200 rounded-tl-none"
+                    : "bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 text-zinc-800 dark:text-zinc-200 rounded-tl-none"
                 )}>
                   {msg.type === "text" ? (
                     <div className="prose prose-sm max-w-none prose-p:leading-relaxed dark:prose-invert">
@@ -200,7 +200,7 @@ export default function AIChat({ language }: AIChatProps) {
             <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
               <Bot size={18} />
             </div>
-            <div className="bg-zinc-50 dark:bg-zinc-800 border border-black/5 dark:border-white/5 p-4 rounded-2xl rounded-tl-none flex items-center gap-3">
+            <div className="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 p-4 rounded-2xl rounded-tl-none flex items-center gap-3">
               <Loader2 size={18} className="animate-spin text-emerald-600 dark:text-emerald-400" />
               <span className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">
                 {isGeneratingImage ? t.generatingVisualization : t.thinking}
@@ -211,7 +211,7 @@ export default function AIChat({ language }: AIChatProps) {
       </div>
 
       {/* Input Area */}
-      <div className="p-4 border-t border-black/5 dark:border-white/5 bg-zinc-50 dark:bg-zinc-800/50">
+      <div className="p-4 border-t border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-zinc-800/50">
         <div className="max-w-4xl mx-auto relative">
           <textarea
             value={input}
@@ -223,7 +223,7 @@ export default function AIChat({ language }: AIChatProps) {
               }
             }}
             placeholder={t.askAnything}
-            className="w-full p-4 pr-32 bg-white dark:bg-zinc-900 border border-black/10 dark:border-white/10 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none shadow-sm resize-none h-20 text-zinc-900 dark:text-zinc-100"
+            className="w-full p-4 pr-32 bg-white dark:bg-zinc-900 border border-black/10 dark:border-white/10 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none shadow-sm resize-none h-20 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
           />
           <div className="absolute right-3 bottom-3 flex gap-2">
             <button

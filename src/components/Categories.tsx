@@ -14,6 +14,8 @@ import { api } from "../services/api";
 import { Category } from "../types";
 import { cn } from "../lib/utils";
 import { translations, Language } from "../i18n/translations";
+import ConfirmDialog from "./ui/ConfirmDialog";
+import Toast, { ToastType } from "./ui/Toast";
 
 interface CategoriesProps {
   language: Language;
@@ -24,8 +26,13 @@ export default function Categories({ language }: CategoriesProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [activeTab, setActiveTab] = useState<"expense" | "income">("expense");
+  const [toast, setToast] = useState<{ message: string, type: ToastType } | null>(null);
 
   const t = translations[language];
+
+  const showToast = (message: string, type: ToastType = "success") => {
+    setToast({ message, type });
+  };
 
   useEffect(() => {
     fetchCategories();
@@ -57,8 +64,8 @@ export default function Categories({ language }: CategoriesProps) {
         </button>
       </div>
 
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-black/5 dark:border-white/5 shadow-sm overflow-hidden transition-colors duration-300">
-        <div className="flex border-b border-black/5 dark:border-white/5">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/5 shadow-sm overflow-hidden transition-colors duration-300">
+        <div className="flex border-b border-zinc-200 dark:border-white/5">
           <button
             onClick={() => setActiveTab("expense")}
             className={cn(
@@ -120,9 +127,18 @@ export default function Categories({ language }: CategoriesProps) {
               categories={categories}
               category={editingCategory}
               t={t}
+              onToast={showToast}
             />
           </div>
         </div>
+      )}
+
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
       )}
     </div>
   );
@@ -194,11 +210,13 @@ function CategoryItem({ category, allCategories, onEdit, onAddSub }: { category:
   );
 }
 
-function CategoryForm({ onClose, categories, t, category }: { onClose: () => void, categories: Category[], t: any, category?: Category | null }) {
+function CategoryForm({ onClose, categories, t, category, onToast }: { onClose: () => void, categories: Category[], t: any, category?: Category | null, onToast: (m: string, ty?: ToastType) => void }) {
   const [name, setName] = useState(category?.name || "");
   const [type, setType] = useState<"expense" | "income">(category?.type || "expense");
   const [parentId, setParentId] = useState(category?.parent_id?.toString() || "");
   const [color, setColor] = useState(category?.color || "#10b981");
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -213,111 +231,129 @@ function CategoryForm({ onClose, categories, t, category }: { onClose: () => voi
 
       if (category?.id) {
         await api.updateCategory(category.id, data);
+        onToast(t.categoryUpdated || "Category updated successfully");
       } else {
         await api.addCategory(data);
+        onToast(t.categoryCreated || "Category created successfully");
       }
       onClose();
     } catch (error: any) {
-      alert(error.message || "Failed to save category");
+      onToast(error.message || "Failed to save category", "error");
     }
   };
 
   const handleDelete = async () => {
-    if (category?.id && window.confirm(t.confirmDeleteCategory)) {
-      try {
-        await api.deleteCategory(category.id);
-        onClose();
-      } catch (error: any) {
-        alert(error.message || "Failed to delete category");
-      }
+    if (!category?.id) return;
+    setIsDeleting(true);
+    try {
+      await api.deleteCategory(category.id);
+      onToast(t.categoryDeleted || "Category deleted successfully");
+      onClose();
+    } catch (error: any) {
+      onToast(error.message || "Failed to delete category", "error");
+    } finally {
+      setIsDeleting(false);
+      setIsConfirmOpen(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-1">
-        <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">{t.categoryName}</label>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. Groceries"
-          className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 dark:border-white/5 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-zinc-900 dark:text-zinc-100"
-          required
-        />
-      </div>
-      <div className="space-y-1">
-        <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">{t.type}</label>
-        <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
-          {(["expense", "income"] as const).map((ty) => (
-            <button
-              key={ty}
-              type="button"
-              onClick={() => setType(ty)}
-              className={cn(
-                "flex-1 py-2 rounded-lg text-sm font-medium capitalize transition-all",
-                type === ty ? "bg-white dark:bg-zinc-700 shadow-sm text-emerald-600 dark:text-emerald-400" : "text-zinc-500 dark:text-zinc-400"
-              )}
-            >
-              {ty === 'expense' ? t.expense : t.income}
-            </button>
-          ))}
+    <>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">{t.categoryName}</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Groceries"
+            className="w-full p-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-zinc-900 dark:text-zinc-100"
+            required
+          />
         </div>
-      </div>
-      <div className="space-y-1">
-        <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">{t.parentCategory}</label>
-        <select
-          value={parentId}
-          onChange={(e) => setParentId(e.target.value)}
-          className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 dark:border-white/5 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-zinc-900 dark:text-zinc-100"
-        >
-          <option value="">{t.noneRoot}</option>
-          {categories.filter(c => c.type === type && !c.parent_id && c.id !== category?.id).map(c => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
-      </div>
-      <div className="space-y-1">
-        <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">{t.themeColor}</label>
-        <div className="flex gap-2">
-          {["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#1a1a1a"].map(c => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => setColor(c)}
-              className={cn(
-                "w-8 h-8 rounded-full border-2 transition-all",
-                color === c ? "border-zinc-900 dark:border-zinc-100 scale-110" : "border-transparent"
-              )}
-              style={{ backgroundColor: c }}
-            />
-          ))}
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">{t.type}</label>
+          <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
+            {(["expense", "income"] as const).map((ty) => (
+              <button
+                key={ty}
+                type="button"
+                onClick={() => setType(ty)}
+                className={cn(
+                  "flex-1 py-2 rounded-lg text-sm font-medium capitalize transition-all",
+                  type === ty ? "bg-white dark:bg-zinc-700 shadow-sm text-emerald-600 dark:text-emerald-400" : "text-zinc-500 dark:text-zinc-400"
+                )}
+              >
+                {ty === 'expense' ? t.expense : t.income}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
-      <div className="flex gap-3 pt-4">
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex-1 py-3 border border-black/5 dark:border-white/5 rounded-xl font-bold text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all"
-        >
-          {t.cancel}
-        </button>
-        {category?.id && (
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">{t.parentCategory}</label>
+          <select
+            value={parentId}
+            onChange={(e) => setParentId(e.target.value)}
+            className="w-full p-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-zinc-900 dark:text-zinc-100"
+          >
+            <option value="">{t.noneRoot}</option>
+            {categories.filter(c => c.type === type && !c.parent_id && c.id !== category?.id).map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">{t.themeColor}</label>
+          <div className="flex gap-2">
+            {["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#1a1a1a"].map(c => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setColor(c)}
+                className={cn(
+                  "w-8 h-8 rounded-full border-2 transition-all",
+                  color === c ? "border-zinc-900 dark:border-zinc-100 scale-110" : "border-transparent"
+                )}
+                style={{ backgroundColor: c }}
+              />
+            ))}
+          </div>
+        </div>
+        <div className="flex gap-3 pt-4">
           <button
             type="button"
-            onClick={handleDelete}
-            className="flex-1 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl font-bold hover:bg-red-100 dark:hover:bg-red-900/30 transition-all"
+            onClick={onClose}
+            className="flex-1 py-3 border border-zinc-200 dark:border-white/5 rounded-xl font-bold text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all"
           >
-            {t.delete}
+            {t.cancel}
           </button>
-        )}
-        <button
-          type="submit"
-          className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-md"
-        >
-          {category?.id ? t.save : t.create}
-        </button>
-      </div>
-    </form>
+          {category?.id && (
+            <button
+              type="button"
+              onClick={() => setIsConfirmOpen(true)}
+              className="flex-1 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl font-bold hover:bg-red-100 dark:hover:bg-red-900/30 transition-all"
+            >
+              {t.delete}
+            </button>
+          )}
+          <button
+            type="submit"
+            className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-md"
+          >
+            {category?.id ? t.save : t.create}
+          </button>
+        </div>
+      </form>
+
+      <ConfirmDialog 
+        isOpen={isConfirmOpen}
+        title={t.deleteCategory || "Delete Category"}
+        message={t.confirmDeleteCategory || "Are you sure you want to delete this category? All associated transactions and budgets will be permanently removed."}
+        confirmText={isDeleting ? "..." : t.delete}
+        cancelText={t.cancel}
+        onConfirm={handleDelete}
+        onCancel={() => setIsConfirmOpen(false)}
+      />
+    </>
   );
 }

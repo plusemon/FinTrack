@@ -159,26 +159,22 @@ async function startServer() {
   });
 
   app.delete("/api/accounts/:id", (req, res) => {
-    try {
+    const deleteOp = db.transaction(() => {
       const { id } = req.params;
       
-      // Check if account has transactions
-      const transactions = db.prepare("SELECT COUNT(*) as count FROM transactions WHERE account_id = ? OR to_account_id = ?").get(id, id) as { count: number };
-      if (transactions.count > 0) {
-        return res.status(400).json({ 
-          error: `Cannot delete account with ${transactions.count} transactions. Please delete the transactions first or transfer them to another account.` 
-        });
-      }
-
-      // Check if account has recurring transactions
-      const recurring = db.prepare("SELECT COUNT(*) as count FROM recurring_transactions WHERE account_id = ?").get(id) as { count: number };
-      if (recurring.count > 0) {
-        return res.status(400).json({ 
-          error: `Cannot delete account with ${recurring.count} recurring transactions.` 
-        });
-      }
-
+      // Delete associated transactions
+      db.prepare("DELETE FROM transactions WHERE account_id = ? OR to_account_id = ?").run(id, id);
+      
+      // Delete associated recurring transactions
+      db.prepare("DELETE FROM recurring_transactions WHERE account_id = ?").run(id);
+      
+      // Delete the account
       const result = db.prepare("DELETE FROM accounts WHERE id = ?").run(id);
+      return result;
+    });
+
+    try {
+      const result = deleteOp();
       if (result.changes === 0) {
         return res.status(404).json({ error: "Account not found" });
       }
@@ -223,19 +219,51 @@ async function startServer() {
   });
 
   app.delete("/api/categories/:id", (req, res) => {
-    try {
+    const deleteOp = db.transaction(() => {
       const { id } = req.params;
-      // Check if category has transactions or subcategories
-      const transactions = db.prepare("SELECT COUNT(*) as count FROM transactions WHERE category_id = ?").get(id) as { count: number };
-      const subcategories = db.prepare("SELECT COUNT(*) as count FROM categories WHERE parent_id = ?").get(id) as { count: number };
-      if (transactions.count > 0 || subcategories.count > 0) {
-        return res.status(400).json({ error: "Cannot delete category with transactions or subcategories" });
+      
+      // Recursive function to get all descendant category IDs
+      const getDescendantIds = (parentId: string): string[] => {
+        const children = db.prepare("SELECT id FROM categories WHERE parent_id = ?").all(parentId) as { id: number }[];
+        let ids: string[] = [];
+        for (const child of children) {
+          const childId = child.id.toString();
+          ids.push(childId);
+          ids = [...ids, ...getDescendantIds(childId)];
+        }
+        return ids;
+      };
+
+      const allIdsToDelete = [id, ...getDescendantIds(id)];
+
+      for (const catId of allIdsToDelete) {
+        // Delete associated transactions
+        db.prepare("DELETE FROM transactions WHERE category_id = ?").run(catId);
+        // Delete associated budgets
+        db.prepare("DELETE FROM budgets WHERE category_id = ?").run(catId);
+        // Delete associated recurring transactions
+        db.prepare("DELETE FROM recurring_transactions WHERE category_id = ?").run(catId);
       }
-      db.prepare("DELETE FROM categories WHERE id = ?").run(id);
+
+      // Delete the categories (delete descendants first to be safe)
+      let totalChanges = 0;
+      for (const catId of [...allIdsToDelete].reverse()) {
+        const result = db.prepare("DELETE FROM categories WHERE id = ?").run(catId);
+        if (catId === id) totalChanges = result.changes;
+      }
+      
+      return { changes: totalChanges };
+    });
+
+    try {
+      const result = deleteOp();
+      if (result.changes === 0) {
+        return res.status(404).json({ error: "Category not found" });
+      }
       res.json({ success: true });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error in DELETE /api/categories:", error);
-      res.status(500).json({ error: "Failed to delete category" });
+      res.status(500).json({ error: error.message || "Failed to delete category" });
     }
   });
 

@@ -103,7 +103,7 @@ export default function TransactionForm({ onClose, currency, language, transacti
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
-            className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 dark:border-white/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-zinc-900 dark:text-zinc-100"
+            className="w-full p-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-zinc-900 dark:text-zinc-100"
             required
           />
         </div>
@@ -113,7 +113,7 @@ export default function TransactionForm({ onClose, currency, language, transacti
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 dark:border-white/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-zinc-900 dark:text-zinc-100"
+            className="w-full p-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-zinc-900 dark:text-zinc-100"
             required
           />
         </div>
@@ -126,7 +126,7 @@ export default function TransactionForm({ onClose, currency, language, transacti
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as "paid" | "unpaid")}
-              className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 dark:border-white/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-zinc-900 dark:text-zinc-100"
+              className="w-full p-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-zinc-900 dark:text-zinc-100"
             >
               <option value="unpaid">{t.unpaid}</option>
               <option value="paid">{t.paid}</option>
@@ -138,7 +138,7 @@ export default function TransactionForm({ onClose, currency, language, transacti
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 dark:border-white/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-zinc-900 dark:text-zinc-100"
+              className="w-full p-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-zinc-900 dark:text-zinc-100"
               required={type === 'due'}
             />
           </div>
@@ -150,7 +150,7 @@ export default function TransactionForm({ onClose, currency, language, transacti
         <select
           value={accountId}
           onChange={(e) => setAccountId(e.target.value)}
-          className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 dark:border-white/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-zinc-900 dark:text-zinc-100"
+          className="w-full p-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-zinc-900 dark:text-zinc-100"
           required
         >
           <option value="">{t.selectAccount}</option>
@@ -164,7 +164,7 @@ export default function TransactionForm({ onClose, currency, language, transacti
           <select
             value={toAccountId}
             onChange={(e) => setToAccountId(e.target.value)}
-            className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 dark:border-white/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-zinc-900 dark:text-zinc-100"
+            className="w-full p-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-zinc-900 dark:text-zinc-100"
             required
           >
             <option value="">{t.selectDestination}</option>
@@ -179,7 +179,7 @@ export default function TransactionForm({ onClose, currency, language, transacti
           <select
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
-            className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 dark:border-white/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-zinc-900 dark:text-zinc-100"
+            className="w-full p-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-zinc-900 dark:text-zinc-100"
             required
           >
             <option value="">{t.selectCategory}</option>
@@ -196,7 +196,7 @@ export default function TransactionForm({ onClose, currency, language, transacti
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Optional notes..."
-          className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 dark:border-white/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none h-20 resize-none text-zinc-900 dark:text-zinc-100"
+          className="w-full p-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none h-20 resize-none text-zinc-900 dark:text-zinc-100"
         />
       </div>
 
@@ -204,7 +204,7 @@ export default function TransactionForm({ onClose, currency, language, transacti
         <button
           type="button"
           onClick={onClose}
-          className="flex-1 py-4 border border-black/5 dark:border-white/5 rounded-xl font-bold text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all"
+          className="flex-1 py-4 border border-zinc-200 dark:border-white/5 rounded-xl font-bold text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all"
         >
           {t.cancel}
         </button>

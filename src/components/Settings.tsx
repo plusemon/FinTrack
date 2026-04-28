@@ -53,8 +53,8 @@ export default function Settings({ onCurrencyChange, currentCurrency, onLanguage
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-black/5 dark:border-white/5 shadow-sm overflow-hidden transition-colors duration-300">
-        <div className="p-6 border-b border-black/5 dark:border-white/5">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/5 shadow-sm overflow-hidden transition-colors duration-300">
+        <div className="p-6 border-b border-zinc-200 dark:border-white/5">
           <h3 className="text-lg font-bold flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
             <Globe size={20} className="text-emerald-600 dark:text-emerald-400" />
             {t.regionalSettings}
@@ -70,7 +70,7 @@ export default function Settings({ onCurrencyChange, currentCurrency, onLanguage
               value={currency}
               onChange={(e) => handleCurrencyChange(e.target.value)}
               disabled={isSaving}
-              className="bg-zinc-50 dark:bg-zinc-800 border border-black/5 dark:border-white/5 rounded-xl px-4 py-2 font-medium outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
+              className="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 rounded-xl px-4 py-2 font-medium outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
             >
               {currencies.map((c) => (
                 <option key={c.code} value={c.code}>
@@ -80,7 +80,7 @@ export default function Settings({ onCurrencyChange, currentCurrency, onLanguage
             </select>
           </div>
 
-          <div className="flex items-center justify-between pt-4 border-t border-black/5 dark:border-white/5">
+          <div className="flex items-center justify-between pt-4 border-t border-zinc-200 dark:border-white/5">
             <div>
               <p className="font-bold text-zinc-900 dark:text-zinc-100">{t.language}</p>
               <p className="text-sm text-zinc-500 dark:text-zinc-400">Choose your preferred language</p>
@@ -89,7 +89,7 @@ export default function Settings({ onCurrencyChange, currentCurrency, onLanguage
               value={language}
               onChange={(e) => handleLanguageChange(e.target.value as Language)}
               disabled={isSaving}
-              className="bg-zinc-50 dark:bg-zinc-800 border border-black/5 dark:border-white/5 rounded-xl px-4 py-2 font-medium outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
+              className="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 rounded-xl px-4 py-2 font-medium outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
             >
               <option value="en">English</option>
               <option value="bn">বাংলা (Bangla)</option>
@@ -98,8 +98,8 @@ export default function Settings({ onCurrencyChange, currentCurrency, onLanguage
         </div>
       </div>
 
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-black/5 dark:border-white/5 shadow-sm overflow-hidden transition-colors duration-300">
-        <div className="p-6 border-b border-black/5 dark:border-white/5">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/5 shadow-sm overflow-hidden transition-colors duration-300">
+        <div className="p-6 border-b border-zinc-200 dark:border-white/5">
           <h3 className="text-lg font-bold flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
             <Bell size={20} className="text-emerald-600 dark:text-emerald-400" />
             {t.notifications}
@@ -127,8 +127,8 @@ export default function Settings({ onCurrencyChange, currentCurrency, onLanguage
         </div>
       </div>
 
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-black/5 dark:border-white/5 shadow-sm overflow-hidden transition-colors duration-300">
-        <div className="p-6 border-b border-black/5 dark:border-white/5">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/5 shadow-sm overflow-hidden transition-colors duration-300">
+        <div className="p-6 border-b border-zinc-200 dark:border-white/5">
           <h3 className="text-lg font-bold flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
             <Shield size={20} className="text-emerald-600 dark:text-emerald-400" />
             {t.security}

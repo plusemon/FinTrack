@@ -11,6 +11,8 @@ import { api } from "../services/api";
 import { Budget, Category } from "../types";
 import { formatCurrency, cn } from "../lib/utils";
 import { translations, Language } from "../i18n/translations";
+import ConfirmDialog from "./ui/ConfirmDialog";
+import Toast, { ToastType } from "./ui/Toast";
 
 interface BudgetsProps {
   currency: string;
@@ -22,8 +24,13 @@ export default function Budgets({ currency, language }: BudgetsProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
+  const [toast, setToast] = useState<{ message: string, type: ToastType } | null>(null);
 
   const t = translations[language];
+
+  const showToast = (message: string, type: ToastType = "success") => {
+    setToast({ message, type });
+  };
 
   useEffect(() => {
     fetchData();
@@ -96,9 +103,18 @@ export default function Budgets({ currency, language }: BudgetsProps) {
               categories={categories}
               budget={editingBudget}
               t={t}
+              onToast={showToast}
             />
           </div>
         </div>
+      )}
+
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
       )}
     </div>
   );
@@ -112,7 +128,7 @@ function BudgetCard({ budget, currency, t, onEdit }: { budget: Budget, currency:
   return (
     <div 
       onClick={onEdit}
-      className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-black/5 dark:border-white/5 shadow-sm space-y-6 transition-colors duration-300 cursor-pointer hover:shadow-md group"
+      className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-white/5 shadow-sm space-y-6 transition-colors duration-300 cursor-pointer hover:shadow-md group"
     >
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
@@ -177,10 +193,12 @@ function BudgetCard({ budget, currency, t, onEdit }: { budget: Budget, currency:
   );
 }
 
-function BudgetForm({ onClose, categories, t, budget }: { onClose: () => void, categories: Category[], t: any, budget?: Budget | null }) {
+function BudgetForm({ onClose, categories, t, budget, onToast }: { onClose: () => void, categories: Category[], t: any, budget?: Budget | null, onToast: (m: string, ty?: ToastType) => void }) {
   const [categoryId, setCategoryId] = useState(budget?.category_id?.toString() || "");
   const [amount, setAmount] = useState(budget?.amount?.toString() || "");
   const [period, setPeriod] = useState(budget?.period || "monthly");
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -193,88 +211,106 @@ function BudgetForm({ onClose, categories, t, budget }: { onClose: () => void, c
 
       if (budget?.id) {
         await api.updateBudget(budget.id, data);
+        onToast(t.budgetUpdated || "Budget updated successfully");
       } else {
         await api.addBudget(data);
+        onToast(t.budgetCreated || "Budget created successfully");
       }
       onClose();
     } catch (error: any) {
-      alert(error.message || "Failed to save budget");
+      onToast(error.message || "Failed to save budget", "error");
     }
   };
 
   const handleDelete = async () => {
-    if (budget?.id && window.confirm(t.confirmDeleteBudget)) {
-      try {
-        await api.deleteBudget(budget.id);
-        onClose();
-      } catch (error: any) {
-        alert(error.message || "Failed to delete budget");
-      }
+    if (!budget?.id) return;
+    setIsDeleting(true);
+    try {
+      await api.deleteBudget(budget.id);
+      onToast(t.budgetDeleted || "Budget deleted successfully");
+      onClose();
+    } catch (error: any) {
+      onToast(error.message || "Failed to delete budget", "error");
+    } finally {
+      setIsDeleting(false);
+      setIsConfirmOpen(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-1">
-        <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">{t.category}</label>
-        <select
-          value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)}
-          className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 dark:border-white/5 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-zinc-900 dark:text-zinc-100"
-        >
-          <option value="">{t.globalAll}</option>
-          {categories.filter(c => c.type === 'expense').map(c => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
-      </div>
-      <div className="space-y-1">
-        <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">{t.budgetAmount}</label>
-        <input
-          type="number"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="0.00"
-          className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 dark:border-white/5 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-zinc-900 dark:text-zinc-100"
-          required
-        />
-      </div>
-      <div className="space-y-1">
-        <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">{t.period}</label>
-        <select
-          value={period}
-          onChange={(e) => setPeriod(e.target.value)}
-          className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 dark:border-white/5 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-zinc-900 dark:text-zinc-100"
-        >
-          <option value="monthly">{t.monthly}</option>
-          <option value="weekly">{t.weekly}</option>
-          <option value="yearly">{t.yearly}</option>
-        </select>
-      </div>
-      <div className="flex gap-3 pt-4">
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex-1 py-3 border border-black/5 dark:border-white/5 rounded-xl font-bold text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all"
-        >
-          {t.cancel}
-        </button>
-        {budget?.id && (
+    <>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">{t.category}</label>
+          <select
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
+            className="w-full p-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-zinc-900 dark:text-zinc-100"
+          >
+            <option value="">{t.globalAll}</option>
+            {categories.filter(c => c.type === 'expense').map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">{t.budgetAmount}</label>
+          <input
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="0.00"
+            className="w-full p-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-zinc-900 dark:text-zinc-100"
+            required
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">{t.period}</label>
+          <select
+            value={period}
+            onChange={(e) => setPeriod(e.target.value)}
+            className="w-full p-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-zinc-900 dark:text-zinc-100"
+          >
+            <option value="monthly">{t.monthly}</option>
+            <option value="weekly">{t.weekly}</option>
+            <option value="yearly">{t.yearly}</option>
+          </select>
+        </div>
+        <div className="flex gap-3 pt-4">
           <button
             type="button"
-            onClick={handleDelete}
-            className="flex-1 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl font-bold hover:bg-red-100 dark:hover:bg-red-900/30 transition-all"
+            onClick={onClose}
+            className="flex-1 py-3 border border-zinc-200 dark:border-white/5 rounded-xl font-bold text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all"
           >
-            {t.delete}
+            {t.cancel}
           </button>
-        )}
-        <button
-          type="submit"
-          className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-md"
-        >
-          {budget?.id ? t.save : t.setBudget}
-        </button>
-      </div>
-    </form>
+          {budget?.id && (
+            <button
+              type="button"
+              onClick={() => setIsConfirmOpen(true)}
+              className="flex-1 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl font-bold hover:bg-red-100 dark:hover:bg-red-900/30 transition-all"
+            >
+              {t.delete}
+            </button>
+          )}
+          <button
+            type="submit"
+            className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-md"
+          >
+            {budget?.id ? t.save : t.setBudget}
+          </button>
+        </div>
+      </form>
+
+      <ConfirmDialog 
+        isOpen={isConfirmOpen}
+        title={t.deleteBudget || "Delete Budget"}
+        message={t.confirmDeleteBudget || "Are you sure you want to delete this budget?"}
+        confirmText={isDeleting ? "..." : t.delete}
+        cancelText={t.cancel}
+        onConfirm={handleDelete}
+        onCancel={() => setIsConfirmOpen(false)}
+      />
+    </>
   );
 }

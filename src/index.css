@@ -6,6 +6,18 @@
 }
 
 @layer base {
+  :root {
+    --tooltip-bg: #ffffff;
+    --tooltip-text: #1a1a1a;
+    --tooltip-border: #e4e4e7; /* zinc-200 */
+  }
+
+  .dark {
+    --tooltip-bg: #18181b;
+    --tooltip-text: #f4f4f5;
+    --tooltip-border: rgba(255,255,255,0.05);
+  }
+
   body {
     @apply antialiased text-zinc-900 bg-[#F8F9FA] transition-colors duration-300;
   }
@@ -31,7 +43,7 @@
 
 /* Markdown Styles */
 .prose {
-  @apply text-sm leading-relaxed;
+  @apply text-sm leading-relaxed text-zinc-800 dark:text-zinc-200;
 }
 
 .prose p {
@@ -47,11 +59,11 @@
 }
 
 .prose strong {
-  @apply font-bold text-zinc-900;
+  @apply font-bold text-zinc-900 dark:text-zinc-100;
 }
 
 .prose h1, .prose h2, .prose h3 {
-  @apply font-bold text-zinc-900 mt-6 mb-2 first:mt-0;
+  @apply font-bold text-zinc-900 dark:text-zinc-100 mt-6 mb-2 first:mt-0;
 }
 
 .prose h1 { @apply text-xl; }
@@ -59,5 +71,5 @@
 .prose h3 { @apply text-base; }
 
 .prose code {
-  @apply bg-zinc-100 px-1.5 py-0.5 rounded text-emerald-600 font-mono text-xs;
+  @apply bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-emerald-600 dark:text-emerald-400 font-mono text-xs;
 }
