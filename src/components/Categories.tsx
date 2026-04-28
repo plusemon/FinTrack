@@ -16,6 +16,7 @@ import { cn } from "../lib/utils";
 import { translations, Language } from "../i18n/translations";
 import ConfirmDialog from "./ui/ConfirmDialog";
 import Toast, { ToastType } from "./ui/Toast";
+import LoadingOverlay from "./ui/LoadingOverlay";
 
 interface CategoriesProps {
   language: Language;
@@ -23,6 +24,7 @@ interface CategoriesProps {
 
 export default function Categories({ language }: CategoriesProps) {
   const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [activeTab, setActiveTab] = useState<"expense" | "income">("expense");
@@ -39,8 +41,13 @@ export default function Categories({ language }: CategoriesProps) {
   }, []);
 
   const fetchCategories = async () => {
-    const data = await api.getCategories();
-    setCategories(data);
+    setIsLoading(true);
+    try {
+      const data = await api.getCategories();
+      setCategories(data);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const rootCategories = categories.filter(c => !c.parent_id && c.type === activeTab);

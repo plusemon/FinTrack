@@ -14,6 +14,7 @@ import { formatCurrency, cn } from "../lib/utils";
 import { translations, Language } from "../i18n/translations";
 import ConfirmDialog from "./ui/ConfirmDialog";
 import Toast, { ToastType } from "./ui/Toast";
+import LoadingOverlay from "./ui/LoadingOverlay";
 
 interface AccountsProps {
   currency: string;
@@ -22,6 +23,7 @@ interface AccountsProps {
 
 export default function Accounts({ currency, language }: AccountsProps) {
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [toast, setToast] = useState<{ message: string, type: ToastType } | null>(null);
@@ -37,8 +39,13 @@ export default function Accounts({ currency, language }: AccountsProps) {
   }, []);
 
   const fetchAccounts = async () => {
-    const data = await api.getAccounts();
-    setAccounts(data);
+    setIsLoading(true);
+    try {
+      const data = await api.getAccounts();
+      setAccounts(data);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -156,9 +163,11 @@ function AccountForm({ onClose, t, account, onToast }: { onClose: () => void, t:
   const [color, setColor] = useState(account?.color || "#10b981");
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsProcessing(true);
     try {
       const data = {
         name,
@@ -178,6 +187,8 @@ function AccountForm({ onClose, t, account, onToast }: { onClose: () => void, t:
       onClose();
     } catch (error: any) {
       onToast(error.message || "Failed to save account", "error");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -206,7 +217,8 @@ function AccountForm({ onClose, t, account, onToast }: { onClose: () => void, t:
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Chase Bank"
-            className="w-full p-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-zinc-900 dark:text-zinc-100"
+            disabled={isProcessing || isDeleting}
+            className="w-full p-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-zinc-900 dark:text-zinc-100 disabled:opacity-50"
             required
           />
         </div>
@@ -215,7 +227,8 @@ function AccountForm({ onClose, t, account, onToast }: { onClose: () => void, t:
           <select
             value={type}
             onChange={(e) => setType(e.target.value)}
-            className="w-full p-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-zinc-900 dark:text-zinc-100"
+            disabled={isProcessing || isDeleting}
+            className="w-full p-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-zinc-900 dark:text-zinc-100 disabled:opacity-50"
           >
             <option value="cash">{t.cashWallet}</option>
             <option value="bank">{t.bankAccount}</option>
@@ -230,7 +243,8 @@ function AccountForm({ onClose, t, account, onToast }: { onClose: () => void, t:
             value={balance}
             onChange={(e) => setBalance(e.target.value)}
             placeholder="0.00"
-            className="w-full p-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-zinc-900 dark:text-zinc-100"
+            disabled={isProcessing || isDeleting}
+            className="w-full p-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-zinc-900 dark:text-zinc-100 disabled:opacity-50"
           />
         </div>
         <div className="space-y-1">
@@ -240,10 +254,12 @@ function AccountForm({ onClose, t, account, onToast }: { onClose: () => void, t:
               <button
                 key={c}
                 type="button"
+                disabled={isProcessing || isDeleting}
                 onClick={() => setColor(c)}
                 className={cn(
                   "w-8 h-8 rounded-full border-2 transition-all",
-                  color === c ? "border-zinc-900 dark:border-zinc-100 scale-110" : "border-transparent"
+                  color === c ? "border-zinc-900 dark:border-zinc-100 scale-110" : "border-transparent",
+                  (isProcessing || isDeleting) && "opacity-50 cursor-not-allowed"
                 )}
                 style={{ backgroundColor: c }}
               />
@@ -254,7 +270,8 @@ function AccountForm({ onClose, t, account, onToast }: { onClose: () => void, t:
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-3 border border-zinc-200 dark:border-white/5 rounded-xl font-bold text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all"
+            disabled={isProcessing || isDeleting}
+            className="flex-1 py-3 border border-zinc-200 dark:border-white/5 rounded-xl font-bold text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {t.cancel}
           </button>
@@ -262,14 +279,16 @@ function AccountForm({ onClose, t, account, onToast }: { onClose: () => void, t:
             <button
               type="button"
               onClick={() => setIsConfirmOpen(true)}
-              className="flex-1 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl font-bold hover:bg-red-100 dark:hover:bg-red-900/30 transition-all"
+              disabled={isProcessing || isDeleting}
+              className="flex-1 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl font-bold hover:bg-red-100 dark:hover:bg-red-900/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {t.delete}
             </button>
           )}
           <button
             type="submit"
-            className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-md"
+            disabled={isProcessing || isDeleting}
+            className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-md disabled:opacity-70"
           >
             {account ? t.save : t.create}
           </button>

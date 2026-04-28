@@ -23,6 +23,7 @@ import TransactionDetails from "./TransactionDetails";
 import TransactionForm from "./TransactionForm";
 import ConfirmDialog from "./ui/ConfirmDialog";
 import Toast, { ToastType } from "./ui/Toast";
+import LoadingOverlay from "./ui/LoadingOverlay";
 import { AnimatePresence, motion } from "motion/react";
 import { X } from "lucide-react";
 
@@ -35,6 +36,7 @@ export default function Transactions({ currency, language }: TransactionsProps) 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterCategory, setFilterCategory] = useState<string>("all");
@@ -42,6 +44,7 @@ export default function Transactions({ currency, language }: TransactionsProps) 
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [toast, setToast] = useState<{ message: string, type: ToastType } | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   const t = translations[language];
 
@@ -54,14 +57,19 @@ export default function Transactions({ currency, language }: TransactionsProps) 
   }, []);
 
   const fetchData = async () => {
-    const [tr, cat, acc] = await Promise.all([
-      api.getTransactions(),
-      api.getCategories(),
-      api.getAccounts()
-    ]);
-    setTransactions(tr);
-    setCategories(cat);
-    setAccounts(acc);
+    setIsLoading(true);
+    try {
+      const [tr, cat, acc] = await Promise.all([
+        api.getTransactions(),
+        api.getCategories(),
+        api.getAccounts()
+      ]);
+      setTransactions(tr);
+      setCategories(cat);
+      setAccounts(acc);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const filteredTransactions = transactions.filter(tr => {
@@ -178,10 +186,14 @@ export default function Transactions({ currency, language }: TransactionsProps) 
                       {tr.type === 'due' && tr.status === 'unpaid' && (
                         <button 
                           onClick={(e) => { 
-                            e.stopPropagation(); 
-                            api.updateTransaction(tr.id, { ...tr, status: 'paid' }).then(fetchData);
+                            e.stopPropagation();
+                            setProcessingId(tr.id);
+                            api.updateTransaction(tr.id, { ...tr, status: 'paid' })
+                              .then(fetchData)
+                              .finally(() => setProcessingId(null));
                           }}
-                          className="p-2 text-zinc-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors"
+                          disabled={processingId !== null}
+                          className="p-2 text-zinc-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors disabled:opacity-50"
                           title={t.markAsPaid}
                         >
                           <CheckCircle2 size={16} />
@@ -253,17 +265,21 @@ export default function Transactions({ currency, language }: TransactionsProps) 
                   {(tr.type === 'expense' || tr.type === 'due') ? "-" : tr.type === 'income' ? "+" : ""}{formatCurrency(tr.amount, currency)}
                 </p>
                 <div className="flex items-center justify-end gap-2 mt-1">
-                  {tr.type === 'due' && tr.status === 'unpaid' && (
-                    <button 
-                      onClick={(e) => { 
-                        e.stopPropagation(); 
-                        api.updateTransaction(tr.id, { ...tr, status: 'paid' }).then(fetchData);
-                      }}
-                      className="p-1 text-emerald-600 dark:text-emerald-400"
-                    >
-                      <CheckCircle2 size={14} />
-                    </button>
-                  )}
+{tr.type === 'due' && tr.status === 'unpaid' && (
+                      <button 
+                        onClick={(e) => { 
+                          e.stopPropagation();
+                          setProcessingId(tr.id);
+                          api.updateTransaction(tr.id, { ...tr, status: 'paid' })
+                            .then(fetchData)
+                            .finally(() => setProcessingId(null));
+                        }}
+                        disabled={processingId !== null}
+                        className="p-1 text-emerald-600 dark:text-emerald-400 disabled:opacity-50"
+                      >
+                        <CheckCircle2 size={14} />
+                      </button>
+                    )}
                   <button 
                     onClick={(e) => { e.stopPropagation(); setEditingTransaction(tr); }}
                     className="p-1 text-zinc-300 dark:text-zinc-600 hover:text-emerald-600 dark:hover:text-emerald-400"
@@ -352,6 +368,7 @@ export default function Transactions({ currency, language }: TransactionsProps) 
         cancelText={t.cancel}
         onConfirm={async () => {
           if (confirmDeleteId) {
+            setProcessingId(confirmDeleteId);
             try {
               await api.deleteTransaction(confirmDeleteId);
               showToast(t.transactionDeleted || "Transaction deleted successfully");
@@ -360,6 +377,8 @@ export default function Transactions({ currency, language }: TransactionsProps) 
               fetchData();
             } catch (error: any) {
               showToast(error.message || "Failed to delete transaction", "error");
+            } finally {
+              setProcessingId(null);
             }
           }
         }}
@@ -373,6 +392,11 @@ export default function Transactions({ currency, language }: TransactionsProps) 
           onClose={() => setToast(null)} 
         />
       )}
+
+      <LoadingOverlay 
+        isVisible={processingId !== null} 
+        message={t.deleting || "Deleting..."} 
+      />
     </div>
   );
 }

@@ -13,6 +13,7 @@ import { formatCurrency, cn } from "../lib/utils";
 import { translations, Language } from "../i18n/translations";
 import ConfirmDialog from "./ui/ConfirmDialog";
 import Toast, { ToastType } from "./ui/Toast";
+import LoadingOverlay from "./ui/LoadingOverlay";
 
 interface BudgetsProps {
   currency: string;
@@ -22,6 +23,7 @@ interface BudgetsProps {
 export default function Budgets({ currency, language }: BudgetsProps) {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
   const [toast, setToast] = useState<{ message: string, type: ToastType } | null>(null);
@@ -37,12 +39,17 @@ export default function Budgets({ currency, language }: BudgetsProps) {
   }, []);
 
   const fetchData = async () => {
-    const [b, c] = await Promise.all([
-      api.getBudgets(),
-      api.getCategories()
-    ]);
-    setBudgets(b);
-    setCategories(c);
+    setIsLoading(true);
+    try {
+      const [b, c] = await Promise.all([
+        api.getBudgets(),
+        api.getCategories()
+      ]);
+      setBudgets(b);
+      setCategories(c);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
