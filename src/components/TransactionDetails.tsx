@@ -77,9 +77,17 @@ export default function TransactionDetails({
                   <p className="font-semibold text-zinc-900 dark:text-zinc-100">{transaction.category_name || (transaction.type === 'due' ? t.creditPurchase : t.transfer)}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-1">{t.account}</p>
+                  <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-1">
+                    {transaction.type === 'transfer' ? t.fromAccount : t.account}
+                  </p>
                   <p className="font-semibold text-zinc-900 dark:text-zinc-100">{transaction.account_name}</p>
                 </div>
+                {transaction.type === 'transfer' && transaction.to_account_name && (
+                  <div>
+                    <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-1">{t.toAccount}</p>
+                    <p className="font-semibold text-zinc-900 dark:text-zinc-100">{transaction.to_account_name}</p>
+                  </div>
+                )}
                 <div>
                   <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-1">{t.status}</p>
                   <div className="flex items-center gap-2">

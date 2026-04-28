@@ -40,13 +40,19 @@ export default function TransactionForm({ onClose, currency, language, transacti
     }
 
     try {
+      const selectedCategory = categories.find(c => c.id.toString() === categoryId);
+      const selectedAccount = accounts.find(a => a.id.toString() === accountId);
+      const destAccount = type === 'transfer' ? accounts.find(a => a.id.toString() === toAccountId) : null;
       const transactionData = {
         type,
         amount: parseFloat(amount),
         date,
         category_id: type === 'transfer' ? null : categoryId,
+        category_name: type === 'transfer' ? null : (selectedCategory?.name || null),
         account_id: accountId,
+        account_name: selectedAccount?.name || null,
         to_account_id: type === 'transfer' ? toAccountId : null,
+        to_account_name: type === 'transfer' ? (destAccount?.name || null) : null,
         notes,
         status,
         due_date: type === 'due' ? dueDate : null

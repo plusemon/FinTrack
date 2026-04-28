@@ -170,7 +170,9 @@ export const translations = {
     budgetExceededMessage: "You have exceeded your budget for",
     dailyReminderTitle: "Daily Reminder",
     dailyReminderMessage: "Don't forget to log your transactions today!",
-    notificationPermissionDenied: "Notification permission denied"
+    notificationPermissionDenied: "Notification permission denied",
+    fromAccount: "From Account",
+    toAccount: "To Account"
   },
   bn: {
     dashboard: "ড্যাশবোর্ড",
@@ -343,7 +345,9 @@ export const translations = {
     budgetExceededMessage: "আপনি আপনার বাজেট অতিক্রম করেছেন",
     dailyReminderTitle: "দৈনিক রিমাইন্ডার",
     dailyReminderMessage: "আজকের লেনদেন লগ করতে ভুলবেন না!",
-    notificationPermissionDenied: "নোটিফিকেশন অনুমতি প্রত্যাখ্যান হয়েছে"
+    notificationPermissionDenied: "নোটিফিকেশন অনুমতি প্রত্যাখ্যান হয়েছে",
+    fromAccount: "উৎস অ্যাকাউন্ট",
+    toAccount: "গন্তব্য অ্যাকাউন্ট"
   }
 };
 

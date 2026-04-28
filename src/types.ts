@@ -28,6 +28,7 @@ export interface Transaction {
   account_id: string;
   account_name?: string;
   to_account_id: string | null;
+  to_account_name?: string;
   notes: string;
   status: "paid" | "unpaid";
   due_date?: string;
