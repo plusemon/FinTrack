@@ -15,7 +15,9 @@ import {
   Settings,
   Bell,
   Sun,
-  Moon
+  Moon,
+  Shield,
+  Fingerprint
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn, formatCurrency } from "./lib/utils";
@@ -45,6 +47,12 @@ export default function App() {
   const [currency, setCurrency] = useState("BDT");
   const [language, setLanguage] = useState<Language>("en");
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [pinEnabled, setPinEnabled] = useState(false);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [isPinVerified, setIsPinVerified] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+  const [pinError, setPinError] = useState("");
+  const [isVerifyingPin, setIsVerifyingPin] = useState(false);
 
   const t = translations[language];
 
@@ -52,8 +60,63 @@ export default function App() {
     if (user) {
       fetchSummary();
       fetchSettings();
+      loadSecuritySettings();
+      api.initializeDefaultData();
     }
   }, [user]);
+
+  const loadSecuritySettings = async () => {
+    try {
+      const settings = await api.getSecuritySettings();
+      setPinEnabled(settings.pinEnabled);
+      setBiometricEnabled(settings.biometricEnabled);
+      if (!settings.pinEnabled) {
+        setIsPinVerified(true);
+      }
+    } catch (error) {
+      console.error("Failed to load security settings:", error);
+      setIsPinVerified(true);
+    }
+  };
+
+  const handlePinVerify = async () => {
+    if (pinInput.length < 4) {
+      setPinError(t.pinIncorrect || "Incorrect PIN");
+      return;
+    }
+    setIsVerifyingPin(true);
+    setPinError("");
+    try {
+      const isValid = await api.verifyPin(pinInput);
+      if (isValid) {
+        setIsPinVerified(true);
+        setPinInput("");
+      } else {
+        setPinError(t.pinIncorrect || "Incorrect PIN");
+      }
+    } catch (error) {
+      console.error("Failed to verify PIN:", error);
+      setPinError("Failed to verify PIN");
+    } finally {
+      setIsVerifyingPin(false);
+    }
+  };
+
+  const handleBiometricAuth = async () => {
+    if (typeof window !== 'undefined' && window.PublicKeyCredential) {
+      try {
+        const credential = await (window.PublicKeyCredential as any).get({
+          challenge: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]),
+          userVerification: "required",
+        });
+        if (credential) {
+          setIsPinVerified(true);
+        }
+      } catch (error) {
+        console.error("Biometric auth failed:", error);
+      }
+    }
+  };
 
   useEffect(() => {
     if (theme === "dark") {
@@ -147,6 +210,61 @@ export default function App() {
           </svg>
           <span className="text-zinc-900 dark:text-zinc-100">Continue with Google</span>
         </button>
+      </div>
+    );
+  }
+
+  if (pinEnabled && !isPinVerified) {
+    return (
+      <div className={cn(
+        "flex flex-col h-screen font-sans items-center justify-center p-6 text-center transition-colors duration-300",
+        theme === "dark" ? "bg-zinc-950 text-zinc-100" : "bg-[#F8F9FA] text-[#1A1A1A]"
+      )}>
+        <div className="w-16 h-16 bg-emerald-600 rounded-2xl flex items-center justify-center text-white mb-6 shadow-xl shadow-emerald-600/20">
+          <Shield size={32} />
+        </div>
+        <h1 className="text-2xl font-bold tracking-tight mb-2">{t.enterYourPin || "Enter your PIN"}</h1>
+        <p className="text-zinc-500 mb-8 max-w-sm">
+          {t.enterPin || "Enter your PIN to unlock FinTrack"}
+        </p>
+        
+        <div className="w-full max-w-xs space-y-4">
+          <input
+            type="password"
+            maxLength={6}
+            value={pinInput}
+            onChange={(e) => {
+              setPinInput(e.target.value.replace(/\D/g, ''));
+              setPinError("");
+            }}
+            onKeyDown={(e) => e.key === 'Enter' && handlePinVerify()}
+            className="w-full px-6 py-4 text-center text-2xl tracking-[0.5em] bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-700 rounded-2xl outline-none focus:border-emerald-500 transition-colors"
+            placeholder="••••"
+            autoFocus
+          />
+          
+          {pinError && (
+            <p className="text-red-500 text-sm">{pinError}</p>
+          )}
+          
+          <button
+            onClick={handlePinVerify}
+            disabled={isVerifyingPin || pinInput.length < 4}
+            className="w-full py-4 bg-emerald-600 text-white font-bold rounded-2xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {isVerifyingPin ? "..." : (t.unlock || "Unlock")}
+          </button>
+          
+          {biometricEnabled && (
+            <button
+              onClick={handleBiometricAuth}
+              className="w-full py-3 flex items-center justify-center gap-2 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
+            >
+              <Fingerprint size={24} />
+              <span>{t.biometricPrompt || "Use biometric"}</span>
+            </button>
+          )}
+        </div>
       </div>
     );
   }

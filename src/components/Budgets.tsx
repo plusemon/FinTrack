@@ -201,6 +201,12 @@ function BudgetForm({ onClose, categories, t, budget, onToast }: { onClose: () =
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+      onToast("Please enter a valid budget amount", "error");
+      return;
+    }
+    
     try {
       const data = {
         category_id: categoryId ? categoryId : null,

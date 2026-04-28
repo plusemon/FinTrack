@@ -1,41 +1,45 @@
 import { GoogleGenAI, Modality, Type } from "@google/genai";
 
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+
 const getAI = () => {
-  return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+  if (!API_KEY) {
+    throw new Error("GEMINI_API_KEY is not configured. Please add VITE_GEMINI_API_KEY to your .env file.");
+  }
+  return new GoogleGenAI({ apiKey: API_KEY });
 };
+
+export const isAIConfigured = () => !!API_KEY;
 
 export const geminiService = {
   async chat(message: string, history: { role: "user" | "model"; parts: { text: string }[] }[]) {
+    if (!isAIConfigured()) {
+      throw new Error("AI service is not configured. Please set VITE_GEMINI_API_KEY in your environment.");
+    }
     const ai = getAI();
     const chat = ai.chats.create({
-      model: "gemini-3.1-pro-preview",
+      model: "gemini-2.0-flash",
       config: {
         systemInstruction: "You are FinTrack AI, a helpful financial assistant. You help users manage their transactions, budgets, and financial goals. You provide advice on saving, investing, and spending habits based on the data provided. Be professional, encouraging, and concise.",
       },
     });
-
-    // Note: sendMessage doesn't support history directly in this version of the SDK as per guidelines, 
-    // but we can simulate it or just use the latest message if needed. 
-    // Actually, the guidelines show chat.sendMessage({ message: "Hello" }).
-    // To handle history, we'd usually pass it to create(), but the snippet doesn't show that.
-    // I'll stick to the provided examples.
     
     const response = await chat.sendMessage({ message });
     return response.text;
   },
 
   async generateImage(prompt: string, size: "1K" | "2K" | "4K" = "1K") {
+    if (!isAIConfigured()) {
+      throw new Error("AI service is not configured. Please set VITE_GEMINI_API_KEY in your environment.");
+    }
     const ai = getAI();
     const response = await ai.models.generateContent({
-      model: "gemini-3-pro-image-preview",
+      model: "gemini-2.0-flash-exp",
       contents: {
         parts: [{ text: prompt }],
       },
       config: {
-        imageConfig: {
-          aspectRatio: "1:1",
-          imageSize: size,
-        },
+        responseModalities: ["image"],
       },
     });
 
@@ -48,17 +52,15 @@ export const geminiService = {
   },
 
   async textToSpeech(text: string) {
+    if (!isAIConfigured()) {
+      throw new Error("AI service is not configured. Please set VITE_GEMINI_API_KEY in your environment.");
+    }
     const ai = getAI();
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-preview-tts",
+      model: "gemini-2.0-flash-exp",
       contents: [{ parts: [{ text }] }],
       config: {
         responseModalities: [Modality.AUDIO],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: "Zephyr" },
-          },
-        },
       },
     });
 

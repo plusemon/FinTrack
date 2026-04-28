@@ -3,7 +3,7 @@
   "appId": "1:268348261340:web:deffb0a3f1545ecae4c519",
   "apiKey": "AIzaSyDLXyamfvIR8EgFBCBm0-Nuzi3E2m5BrjE",
   "authDomain": "fin-track-bc2c2.firebaseapp.com",
-  "firestoreDatabaseId": "fin-track-bc2c2",
+  "firestoreDatabaseId": "(default)",
   "storageBucket": "fin-track-bc2c2.firebasestorage.app",
   "messagingSenderId": "268348261340",
   "measurementId": ""

@@ -58,6 +58,41 @@ export default function TransactionForm({ onClose, currency, language, transacti
         await api.updateTransaction(transaction.id, transactionData);
       } else {
         await api.addTransaction(transactionData);
+        
+        if (type === 'transfer' && toAccountId) {
+          const currentAccounts = await api.getAccounts();
+          const sourceAccount = currentAccounts.find(a => a.id.toString() === accountId);
+          const destAccount = currentAccounts.find(a => a.id.toString() === toAccountId);
+          
+          if (sourceAccount && destAccount) {
+            await api.updateAccount(sourceAccount.id, {
+              ...sourceAccount,
+              balance: sourceAccount.balance - parseFloat(amount)
+            });
+            await api.updateAccount(destAccount.id, {
+              ...destAccount,
+              balance: destAccount.balance + parseFloat(amount)
+            });
+          }
+        } else if (type === 'income' || (type === 'due' && status === 'paid')) {
+          const currentAccounts = await api.getAccounts();
+          const account = currentAccounts.find(a => a.id.toString() === accountId);
+          if (account) {
+            await api.updateAccount(account.id, {
+              ...account,
+              balance: account.balance + parseFloat(amount)
+            });
+          }
+        } else if (type === 'expense') {
+          const currentAccounts = await api.getAccounts();
+          const account = currentAccounts.find(a => a.id.toString() === accountId);
+          if (account) {
+            await api.updateAccount(account.id, {
+              ...account,
+              balance: account.balance - parseFloat(amount)
+            });
+          }
+        }
       }
       onClose();
     } catch (error) {
@@ -168,7 +203,7 @@ export default function TransactionForm({ onClose, currency, language, transacti
             required
           >
             <option value="">{t.selectDestination}</option>
-            {accounts.filter(a => a.id.toString() !== accountId).map(a => (
+            {accounts.filter(a => String(a.id) !== String(accountId)).map(a => (
               <option key={a.id} value={a.id}>{a.name}</option>
             ))}
           </select>

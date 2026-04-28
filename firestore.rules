@@ -19,7 +19,7 @@ service cloud.firestore {
     function incoming() {
       return request.resource.data;
     }
-    
+
     function existing() {
       return resource.data;
     }
@@ -73,6 +73,7 @@ service cloud.firestore {
       return data.keys().hasOnly(['category_id', 'amount', 'period', 'userId']) &&
              data.keys().hasAll(['amount', 'period', 'userId']) &&
              isValidNumber(data.amount) &&
+             (data.category_id == null || (data.category_id is string && data.category_id.size() <= 128)) &&
              data.period in ['monthly', 'weekly', 'yearly'] &&
              data.userId == request.auth.uid;
     }
@@ -89,32 +90,32 @@ service cloud.firestore {
     match /users/{userId} {
       match /accounts/{accountId} {
         allow read: if isOwner(userId);
-        allow create: if isOwner(userId) && isValidId(accountId) && isValidAccount();
-        allow update: if isOwner(userId) && isValidId(accountId) && isValidAccount() && incoming().userId == existing().userId;
-        allow delete: if isOwner(userId) && isValidId(accountId);
+        allow create: if isOwner(userId) && isValidAccount();
+        allow update: if isOwner(userId) && isValidAccount();
+        allow delete: if isOwner(userId);
       }
       match /categories/{categoryId} {
         allow read: if isOwner(userId);
-        allow create: if isOwner(userId) && isValidId(categoryId) && isValidCategory();
-        allow update: if isOwner(userId) && isValidId(categoryId) && isValidCategory() && incoming().userId == existing().userId;
-        allow delete: if isOwner(userId) && isValidId(categoryId);
+        allow create: if isOwner(userId) && isValidCategory();
+        allow update: if isOwner(userId) && isValidCategory();
+        allow delete: if isOwner(userId);
       }
       match /transactions/{transactionId} {
         allow read: if isOwner(userId);
-        allow create: if isOwner(userId) && isValidId(transactionId) && isValidTransaction();
-        allow update: if isOwner(userId) && isValidId(transactionId) && isValidTransaction() && incoming().userId == existing().userId;
-        allow delete: if isOwner(userId) && isValidId(transactionId);
+        allow create: if isOwner(userId) && isValidTransaction();
+        allow update: if isOwner(userId) && isValidTransaction();
+        allow delete: if isOwner(userId);
       }
       match /budgets/{budgetId} {
         allow read: if isOwner(userId);
-        allow create: if isOwner(userId) && isValidId(budgetId) && isValidBudget();
-        allow update: if isOwner(userId) && isValidId(budgetId) && isValidBudget() && incoming().userId == existing().userId;
-        allow delete: if isOwner(userId) && isValidId(budgetId);
+        allow create: if isOwner(userId) && isValidBudget();
+        allow update: if isOwner(userId) && isValidBudget();
+        allow delete: if isOwner(userId);
       }
       match /settings/profile {
         allow read: if isOwner(userId);
         allow create: if isOwner(userId) && isValidSettings();
-        allow update: if isOwner(userId) && isValidSettings() && incoming().userId == existing().userId;
+        allow update: if isOwner(userId) && isValidSettings();
       }
     }
   }

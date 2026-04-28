@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, deleteUser as firebaseDeleteUser } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
@@ -23,4 +23,11 @@ export const logOut = async () => {
   } catch (error) {
     console.error("Error signing out", error);
   }
+};
+
+export const deleteUserAccount = async () => {
+  if (!auth.currentUser) {
+    throw new Error("No user logged in");
+  }
+  await firebaseDeleteUser(auth.currentUser);
 };
