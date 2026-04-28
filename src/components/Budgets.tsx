@@ -47,9 +47,8 @@ export default function Budgets({ currency, language }: BudgetsProps) {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h3 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">{t.budgetManagement}</h3>
           <p className="text-zinc-500 dark:text-zinc-400">{t.setLimits}</p>
         </div>
         <button 
@@ -57,14 +56,14 @@ export default function Budgets({ currency, language }: BudgetsProps) {
             setEditingBudget(null);
             setIsModalOpen(true);
           }}
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-md"
+          className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-md"
         >
           <Plus size={20} />
           {t.setBudget}
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {budgets.map((budget) => (
           <BudgetCard 
             key={budget.id} 
@@ -204,7 +203,7 @@ function BudgetForm({ onClose, categories, t, budget, onToast }: { onClose: () =
     e.preventDefault();
     try {
       const data = {
-        category_id: categoryId ? parseInt(categoryId) : null,
+        category_id: categoryId ? categoryId : null,
         amount: parseFloat(amount),
         period
       };

@@ -1,0 +1,121 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    //////////////////// Helper Functions ////////////////////
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    function incoming() {
+      return request.resource.data;
+    }
+    
+    function existing() {
+      return resource.data;
+    }
+
+    // Type validation helpers
+    function isValidString(val, maxLen) {
+      return val is string && val.size() <= maxLen;
+    }
+
+    function isValidNumber(val) {
+      return val is number;
+    }
+    
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    //////////////////// Blueprint Validators ////////////////////
+
+    function isValidAccount() {
+      let data = incoming();
+      return data.keys().hasOnly(['name', 'type', 'balance', 'icon', 'color', 'userId']) &&
+             data.keys().hasAll(['name', 'type', 'balance', 'userId']) &&
+             isValidString(data.name, 100) &&
+             data.type in ['cash', 'bank', 'card', 'investment'] &&
+             isValidNumber(data.balance) &&
+             data.userId == request.auth.uid;
+    }
+
+    function isValidCategory() {
+      let data = incoming();
+      return data.keys().hasOnly(['name', 'parent_id', 'type', 'icon', 'color', 'userId']) &&
+             data.keys().hasAll(['name', 'type', 'userId']) &&
+             isValidString(data.name, 100) &&
+             data.type in ['income', 'expense'] &&
+             data.userId == request.auth.uid;
+    }
+
+    function isValidTransaction() {
+      let data = incoming();
+      return data.keys().hasOnly(['type', 'amount', 'date', 'category_id', 'category_name', 'account_id', 'account_name', 'to_account_id', 'notes', 'status', 'due_date', 'userId']) &&
+             data.keys().hasAll(['type', 'amount', 'date', 'account_id', 'userId']) &&
+             data.type in ['income', 'expense', 'transfer', 'due'] &&
+             isValidNumber(data.amount) &&
+             isValidString(data.date, 30) &&
+             data.userId == request.auth.uid;
+    }
+
+    function isValidBudget() {
+      let data = incoming();
+      return data.keys().hasOnly(['category_id', 'amount', 'period', 'userId']) &&
+             data.keys().hasAll(['amount', 'period', 'userId']) &&
+             isValidNumber(data.amount) &&
+             data.period in ['monthly', 'weekly', 'yearly'] &&
+             data.userId == request.auth.uid;
+    }
+
+    function isValidSettings() {
+      let data = incoming();
+      return data.keys().hasOnly(['currency', 'theme', 'language', 'userId']) &&
+             data.keys().hasAll(['userId']) &&
+             data.userId == request.auth.uid;
+    }
+
+    //////////////////// Path Rules ////////////////////
+
+    match /users/{userId} {
+      match /accounts/{accountId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(accountId) && isValidAccount();
+        allow update: if isOwner(userId) && isValidId(accountId) && isValidAccount() && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(accountId);
+      }
+      match /categories/{categoryId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(categoryId) && isValidCategory();
+        allow update: if isOwner(userId) && isValidId(categoryId) && isValidCategory() && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(categoryId);
+      }
+      match /transactions/{transactionId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(transactionId) && isValidTransaction();
+        allow update: if isOwner(userId) && isValidId(transactionId) && isValidTransaction() && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(transactionId);
+      }
+      match /budgets/{budgetId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(budgetId) && isValidBudget();
+        allow update: if isOwner(userId) && isValidId(budgetId) && isValidBudget() && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(budgetId);
+      }
+      match /settings/profile {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidSettings();
+        allow update: if isOwner(userId) && isValidSettings() && incoming().userId == existing().userId;
+      }
+    }
+  }
+}

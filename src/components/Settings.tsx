@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Globe, CreditCard, Bell, Shield, Info, Languages } from "lucide-react";
+import { Globe, CreditCard, Bell, Shield, Info, Languages, LogOut } from "lucide-react";
 import { api } from "../services/api";
 import { translations, Language } from "../i18n/translations";
+import { useAuth } from "../lib/AuthContext";
 
 interface SettingsProps {
   onCurrencyChange: (currency: string) => void;
@@ -14,6 +15,7 @@ export default function Settings({ onCurrencyChange, currentCurrency, onLanguage
   const [currency, setCurrency] = useState(currentCurrency);
   const [language, setLanguage] = useState(currentLanguage);
   const [isSaving, setIsSaving] = useState(false);
+  const { user, logOut } = useAuth();
 
   const t = translations[language];
 
@@ -144,6 +146,30 @@ export default function Settings({ onCurrencyChange, currentCurrency, onLanguage
             <div className="w-12 h-6 bg-emerald-500 dark:bg-emerald-600 rounded-full relative">
               <div className="absolute right-1 top-1 w-4 h-4 bg-white dark:bg-zinc-300 rounded-full shadow-sm" />
             </div>
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/5 shadow-sm overflow-hidden transition-colors duration-300">
+        <div className="p-6 border-b border-zinc-200 dark:border-white/5">
+          <h3 className="text-lg font-bold flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
+            <span className="w-8 h-8 rounded-full overflow-hidden inline-block mr-2">
+              <img src={user?.photoURL || `https://ui-avatars.com/api/?name=${user?.displayName || 'User'}`} alt="User" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            </span>
+            Account
+          </h3>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="mb-4">
+            <p className="font-bold text-zinc-900 dark:text-zinc-100">{user?.displayName}</p>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">{user?.email}</p>
+          </div>
+          <button 
+            onClick={logOut}
+            className="w-full flex items-center justify-center gap-2 p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 font-bold transition-colors"
+          >
+            <LogOut size={20} />
+            Sign Out
           </button>
         </div>
       </div>

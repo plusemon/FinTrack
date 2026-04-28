@@ -1,7 +1,7 @@
 export type TransactionType = "income" | "expense" | "transfer" | "due";
 
 export interface Account {
-  id: number;
+  id: string;
   name: string;
   type: string;
   balance: number;
@@ -10,32 +10,32 @@ export interface Account {
 }
 
 export interface Category {
-  id: number;
+  id: string;
   name: string;
-  parent_id: number | null;
+  parent_id: string | null;
   type: "income" | "expense";
   icon: string;
   color: string;
 }
 
 export interface Transaction {
-  id: number;
+  id: string;
   type: TransactionType;
   amount: number;
   date: string;
-  category_id: number | null;
+  category_id: string | null;
   category_name?: string;
-  account_id: number;
+  account_id: string;
   account_name?: string;
-  to_account_id: number | null;
+  to_account_id: string | null;
   notes: string;
   status: "paid" | "unpaid";
   due_date?: string;
 }
 
 export interface Budget {
-  id: number;
-  category_id: number | null;
+  id: string;
+  category_id: string | null;
   category_name?: string;
   amount: number;
   spent: number;

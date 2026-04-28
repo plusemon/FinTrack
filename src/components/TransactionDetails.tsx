@@ -17,7 +17,7 @@ interface TransactionDetailsProps {
   transaction: Transaction | null;
   onClose: () => void;
   onEdit: (tr: Transaction) => void;
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void;
   currency: string;
   language: Language;
 }

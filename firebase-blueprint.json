@@ -1,0 +1,98 @@
+{
+  "entities": {
+    "Account": {
+      "title": "Account",
+      "description": "User's financial account",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["cash", "bank", "card", "investment"] },
+        "balance": { "type": "number" },
+        "icon": { "type": "string" },
+        "color": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["name", "type", "balance", "userId"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Transaction category",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "parent_id": { "type": ["string", "null"] },
+        "type": { "type": "string", "enum": ["income", "expense"] },
+        "icon": { "type": "string" },
+        "color": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["name", "type", "userId"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "A financial transaction",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["income", "expense", "transfer", "due"] },
+        "amount": { "type": "number" },
+        "date": { "type": "string" },
+        "category_id": { "type": ["string", "null"] },
+        "category_name": { "type": ["string", "null"] },
+        "account_id": { "type": "string" },
+        "account_name": { "type": "string" },
+        "to_account_id": { "type": ["string", "null"] },
+        "notes": { "type": ["string", "null"] },
+        "status": { "type": "string", "enum": ["paid", "unpaid"] },
+        "due_date": { "type": ["string", "null"] },
+        "userId": { "type": "string" }
+      },
+      "required": ["type", "amount", "date", "account_id", "userId"]
+    },
+    "Budget": {
+      "title": "Budget",
+      "description": "User budget limit",
+      "type": "object",
+      "properties": {
+        "category_id": { "type": ["string", "null"] },
+        "amount": { "type": "number" },
+        "period": { "type": "string", "enum": ["monthly", "weekly", "yearly"] },
+        "userId": { "type": "string" }
+      },
+      "required": ["amount", "period", "userId"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "User specific settings",
+      "type": "object",
+      "properties": {
+        "currency": { "type": "string" },
+        "theme": { "type": "string" },
+        "language": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["userId"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/accounts/{accountId}": {
+      "schema": { "$ref": "#/entities/Account" },
+      "description": "User's accounts"
+    },
+    "/users/{userId}/categories/{categoryId}": {
+      "schema": { "$ref": "#/entities/Category" },
+      "description": "User's categories"
+    },
+    "/users/{userId}/transactions/{transactionId}": {
+      "schema": { "$ref": "#/entities/Transaction" },
+      "description": "User's transactions"
+    },
+    "/users/{userId}/budgets/{budgetId}": {
+      "schema": { "$ref": "#/entities/Budget" },
+      "description": "User's budgets"
+    },
+    "/users/{userId}/settings/profile": {
+      "schema": { "$ref": "#/entities/Settings" },
+      "description": "User's settings"
+    }
+  }
+}

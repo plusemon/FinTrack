@@ -224,7 +224,7 @@ function CategoryForm({ onClose, categories, t, category, onToast }: { onClose: 
       const data = {
         name,
         type,
-        parent_id: parentId ? parseInt(parentId) : null,
+        parent_id: parentId ? parentId : null,
         icon: "Folder",
         color
       };

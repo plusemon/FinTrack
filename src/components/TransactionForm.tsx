@@ -44,9 +44,9 @@ export default function TransactionForm({ onClose, currency, language, transacti
         type,
         amount: parseFloat(amount),
         date,
-        category_id: type === 'transfer' ? null : parseInt(categoryId),
-        account_id: parseInt(accountId),
-        to_account_id: type === 'transfer' ? parseInt(toAccountId) : null,
+        category_id: type === 'transfer' ? null : categoryId,
+        account_id: accountId,
+        to_account_id: type === 'transfer' ? toAccountId : null,
         notes,
         status,
         due_date: type === 'due' ? dueDate : null
