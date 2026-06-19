@@ -132,7 +132,7 @@ export default function Dashboard({ summary, onRefresh, currency, language, onNa
             {t.trends}
           </h3>
           <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
@@ -171,7 +171,7 @@ export default function Dashboard({ summary, onRefresh, currency, language, onNa
             {t.categoryDistribution}
           </h3>
           <div className="h-[300px] w-full flex items-center">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <PieChart>
                 <Pie
                   data={categoryData.length > 0 ? categoryData : [{ name: 'No Data', value: 1, color: '#f1f5f9' }]}
