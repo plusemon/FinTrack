@@ -34,13 +34,16 @@ import Budgets from "./components/Budgets";
 import AIChat from "./components/AIChat";
 import SettingsView from "./components/Settings";
 import TransactionForm from "./components/TransactionForm";
+import PartnerSwitcher from "./components/PartnerSwitcher";
 
 import { useAuth } from "./lib/AuthContext";
+import { usePartner } from "./lib/PartnerContext";
 
 type View = "dashboard" | "transactions" | "accounts" | "categories" | "budgets" | "ai-chat" | "more" | "settings";
 
 export default function App() {
   const { user, loading, signInWithGoogle, logOut } = useAuth();
+  const { activeOwnerId, activeOwnerName } = usePartner();
   const [activeView, setActiveView] = useState<View>("dashboard");
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -153,6 +156,15 @@ export default function App() {
       console.error("Failed to fetch settings:", error);
     }
   };
+
+  useEffect(() => {
+    if (activeOwnerId) {
+      fetchSummary();
+      if (activeView === "settings") {
+        setActiveView("dashboard");
+      }
+    }
+  }, [activeOwnerId]);
 
   const navItems = [
     { id: "dashboard", label: t.home, icon: LayoutDashboard },
@@ -289,7 +301,7 @@ export default function App() {
         </div>
         
         <div className="flex items-center gap-3">
-          <button 
+          <button
             onClick={toggleTheme}
             className={cn(
               "p-2 rounded-xl transition-colors",
@@ -298,6 +310,7 @@ export default function App() {
           >
             {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
           </button>
+          <PartnerSwitcher language={language} theme={theme} />
           <button className={cn(
             "p-2 relative transition-colors",
             theme === "dark" ? "text-zinc-400 hover:text-zinc-200" : "text-zinc-400 hover:text-zinc-600"
@@ -305,14 +318,24 @@ export default function App() {
             <Bell size={20} />
             <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-zinc-900"></span>
           </button>
-          <button 
-            onClick={() => setActiveView("settings")}
-            className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 overflow-hidden cursor-pointer hover:ring-2 hover:ring-emerald-500 transition-all focus:outline-none"
+          <button
+            onClick={() => !activeOwnerId && setActiveView("settings")}
+            disabled={!!activeOwnerId}
+            className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 overflow-hidden cursor-pointer hover:ring-2 hover:ring-emerald-500 transition-all focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <img src={user?.photoURL || `https://ui-avatars.com/api/?name=${user?.displayName || 'User'}`} alt="User" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
           </button>
         </div>
       </header>
+
+      {activeOwnerId && activeOwnerName && (
+        <div className={cn(
+          "px-6 py-2 text-xs font-bold text-center shrink-0",
+          theme === "dark" ? "bg-emerald-900/30 text-emerald-300" : "bg-emerald-50 text-emerald-700"
+        )}>
+          {t.editModeBanner.replace("{{name}}", activeOwnerName)}
+        </div>
+      )}
 
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto pb-24">
@@ -325,7 +348,7 @@ export default function App() {
 
           <AnimatePresence mode="wait">
             <motion.div
-              key={activeView}
+              key={`${activeView}-${activeOwnerId || "me"}`}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
@@ -360,11 +383,12 @@ export default function App() {
                     <div className="p-3 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-xl"><Tags size={24} /></div>
                     <span className="font-bold">{t.categories}</span>
                   </button>
-                  <button 
-                    onClick={() => setActiveView("settings")}
+                  <button
+                    onClick={() => !activeOwnerId && setActiveView("settings")}
+                    disabled={!!activeOwnerId}
                     className={cn(
                       "p-6 rounded-2xl border shadow-sm flex flex-col items-center gap-3 transition-all",
-                      theme === "dark" ? "bg-zinc-900 border-white/5 hover:bg-zinc-800" : "bg-white border-zinc-200 hover:bg-zinc-50"
+                      theme === "dark" ? "bg-zinc-900 border-white/5 hover:bg-zinc-800 disabled:opacity-50" : "bg-white border-zinc-200 hover:bg-zinc-50 disabled:opacity-50"
                     )}
                   >
                     <div className="p-3 bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl"><Settings size={24} /></div>

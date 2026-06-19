@@ -3,6 +3,7 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import { AuthProvider } from './lib/AuthContext.tsx';
+import { PartnerProvider } from './lib/PartnerContext.tsx';
 import ErrorBoundary from './components/ErrorBoundary.tsx';
 
 // Register PWA service worker
@@ -18,7 +19,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
       <AuthProvider>
-        <App />
+        <PartnerProvider>
+          <App />
+        </PartnerProvider>
       </AuthProvider>
     </ErrorBoundary>
   </StrictMode>,

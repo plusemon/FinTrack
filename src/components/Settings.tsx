@@ -7,6 +7,7 @@ import { deleteUserAccount, db } from "../lib/firebase";
 import { doc } from "firebase/firestore";
 import ConfirmDialog from "./ui/ConfirmDialog";
 import Toast, { ToastType } from "./ui/Toast";
+import PartnerSettings from "./PartnerSettings";
 
 function Toggle({ enabled, onChange, disabled }: { enabled: boolean; onChange: (val: boolean) => void; disabled?: boolean }) {
   return (
@@ -421,6 +422,9 @@ export default function Settings({ onCurrencyChange, currentCurrency, onLanguage
           </button>
         </div>
       </div>
+
+      {/* Partner Sharing */}
+      <PartnerSettings language={language} />
 
       {showPinModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">

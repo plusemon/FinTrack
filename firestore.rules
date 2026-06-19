@@ -7,15 +7,15 @@ service cloud.firestore {
     }
 
     //////////////////// Helper Functions ////////////////////
-    
+
     function isSignedIn() {
       return request.auth != null;
     }
-    
+
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
-    
+
     function incoming() {
       return request.resource.data;
     }
@@ -24,7 +24,6 @@ service cloud.firestore {
       return resource.data;
     }
 
-    // Type validation helpers
     function isValidString(val, maxLen) {
       return val is string && val.size() <= maxLen;
     }
@@ -32,9 +31,34 @@ service cloud.firestore {
     function isValidNumber(val) {
       return val is number;
     }
-    
+
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function partnerDocPath(ownerId) {
+      return /databases/$(database)/documents/users/$(ownerId)/partners/$(request.auth.uid);
+    }
+
+    function isAcceptedPartner(ownerId) {
+      return isSignedIn() &&
+             exists(partnerDocPath(ownerId)) &&
+             get(partnerDocPath(ownerId)).data.status == 'accepted';
+    }
+
+    function isWritePartner(ownerId) {
+      return isSignedIn() &&
+             exists(partnerDocPath(ownerId)) &&
+             get(partnerDocPath(ownerId)).data.status == 'accepted' &&
+             get(partnerDocPath(ownerId)).data.permission == 'write';
+    }
+
+    function isAuthorizedReader(ownerId) {
+      return isOwner(ownerId) || isAcceptedPartner(ownerId);
+    }
+
+    function isAuthorizedWriter(ownerId) {
+      return isOwner(ownerId) || isWritePartner(ownerId);
     }
 
     //////////////////// Blueprint Validators ////////////////////
@@ -46,7 +70,7 @@ service cloud.firestore {
              isValidString(data.name, 100) &&
              data.type in ['cash', 'bank', 'card', 'investment'] &&
              isValidNumber(data.balance) &&
-             data.userId == request.auth.uid;
+             data.userId == userId;
     }
 
     function isValidCategory() {
@@ -55,17 +79,17 @@ service cloud.firestore {
              data.keys().hasAll(['name', 'type', 'userId']) &&
              isValidString(data.name, 100) &&
              data.type in ['income', 'expense'] &&
-             data.userId == request.auth.uid;
+             data.userId == userId;
     }
 
     function isValidTransaction() {
       let data = incoming();
-      return data.keys().hasOnly(['type', 'amount', 'date', 'category_id', 'category_name', 'account_id', 'account_name', 'to_account_id', 'notes', 'status', 'due_date', 'userId']) &&
+      return data.keys().hasOnly(['type', 'amount', 'date', 'category_id', 'category_name', 'account_id', 'account_name', 'to_account_id', 'to_account_name', 'notes', 'status', 'due_date', 'userId']) &&
              data.keys().hasAll(['type', 'amount', 'date', 'account_id', 'userId']) &&
              data.type in ['income', 'expense', 'transfer', 'due'] &&
              isValidNumber(data.amount) &&
              isValidString(data.date, 30) &&
-             data.userId == request.auth.uid;
+             data.userId == userId;
     }
 
     function isValidBudget() {
@@ -75,47 +99,98 @@ service cloud.firestore {
              isValidNumber(data.amount) &&
              (data.category_id == null || (data.category_id is string && data.category_id.size() <= 128)) &&
              data.period in ['monthly', 'weekly', 'yearly'] &&
-             data.userId == request.auth.uid;
+             data.userId == userId;
     }
 
     function isValidSettings() {
       let data = incoming();
-      return data.keys().hasOnly(['currency', 'theme', 'language', 'userId']) &&
+      return data.keys().hasOnly(['currency', 'theme', 'language', 'userId', 'pinHash', 'biometricEnabled', 'dailyReminderEnabled', 'reminderTime', 'budgetAlertsEnabled']) &&
              data.keys().hasAll(['userId']) &&
              data.userId == request.auth.uid;
     }
 
+    function isValidUserProfile() {
+      let data = incoming();
+      return data.keys().hasOnly(['uid', 'email', 'displayName', 'photoURL', 'updatedAt']) &&
+             data.keys().hasAll(['uid', 'email', 'displayName', 'updatedAt']) &&
+             data.uid == userId &&
+             isValidString(data.email, 254) &&
+             isValidString(data.displayName, 100) &&
+             isValidString(data.updatedAt, 30);
+    }
+
+    function isValidPartnerDoc(ownerId, partnerId) {
+      let data = incoming();
+      return data.keys().hasOnly(['ownerId', 'ownerEmail', 'ownerName', 'ownerPhotoURL', 'partnerId', 'partnerEmail', 'partnerName', 'partnerPhotoURL', 'status', 'permission', 'createdAt', 'acceptedAt']) &&
+             data.keys().hasAll(['ownerId', 'partnerId', 'status', 'permission', 'createdAt']) &&
+             data.ownerId == ownerId &&
+             data.partnerId == partnerId &&
+             data.status in ['pending', 'accepted', 'revoked'] &&
+             data.permission in ['read', 'write'] &&
+             isValidString(data.createdAt, 30);
+    }
+
+    function partnerOnlyAcceptsInvite(existingData) {
+      let data = incoming();
+      return data.status == 'accepted' &&
+             existingData.status == 'pending' &&
+             data.permission == existingData.permission &&
+             data.ownerId == existingData.ownerId &&
+             data.partnerId == existingData.partnerId &&
+             isValidString(data.acceptedAt, 30);
+    }
+
     //////////////////// Path Rules ////////////////////
+
+    match /userProfiles/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(userId) && isValidUserProfile();
+      allow update: if isOwner(userId) && isValidUserProfile();
+    }
 
     match /users/{userId} {
       match /accounts/{accountId} {
-        allow read: if isOwner(userId);
-        allow create: if isOwner(userId) && isValidAccount();
-        allow update: if isOwner(userId) && isValidAccount();
-        allow delete: if isOwner(userId);
+        allow read: if isAuthorizedReader(userId);
+        allow create: if isAuthorizedWriter(userId) && isValidAccount();
+        allow update: if isAuthorizedWriter(userId) && isValidAccount();
+        allow delete: if isAuthorizedWriter(userId);
       }
       match /categories/{categoryId} {
-        allow read: if isOwner(userId);
-        allow create: if isOwner(userId) && isValidCategory();
-        allow update: if isOwner(userId) && isValidCategory();
-        allow delete: if isOwner(userId);
+        allow read: if isAuthorizedReader(userId);
+        allow create: if isAuthorizedWriter(userId) && isValidCategory();
+        allow update: if isAuthorizedWriter(userId) && isValidCategory();
+        allow delete: if isAuthorizedWriter(userId);
       }
       match /transactions/{transactionId} {
-        allow read: if isOwner(userId);
-        allow create: if isOwner(userId) && isValidTransaction();
-        allow update: if isOwner(userId) && isValidTransaction();
-        allow delete: if isOwner(userId);
+        allow read: if isAuthorizedReader(userId);
+        allow create: if isAuthorizedWriter(userId) && isValidTransaction();
+        allow update: if isAuthorizedWriter(userId) && isValidTransaction();
+        allow delete: if isAuthorizedWriter(userId);
       }
       match /budgets/{budgetId} {
-        allow read: if isOwner(userId);
-        allow create: if isOwner(userId) && isValidBudget();
-        allow update: if isOwner(userId) && isValidBudget();
-        allow delete: if isOwner(userId);
+        allow read: if isAuthorizedReader(userId);
+        allow create: if isAuthorizedWriter(userId) && isValidBudget();
+        allow update: if isAuthorizedWriter(userId) && isValidBudget();
+        allow delete: if isAuthorizedWriter(userId);
       }
       match /settings/profile {
         allow read: if isOwner(userId);
         allow create: if isOwner(userId) && isValidSettings();
         allow update: if isOwner(userId) && isValidSettings();
+      }
+      match /partners/{partnerId} {
+        allow read: if isOwner(userId) || request.auth.uid == partnerId;
+        allow create: if isOwner(userId) && isValidPartnerDoc(userId, partnerId);
+        allow update: if (isOwner(userId) && isValidPartnerDoc(userId, partnerId)) ||
+                        (request.auth.uid == partnerId && partnerOnlyAcceptsInvite(existing()));
+        allow delete: if isOwner(userId);
+      }
+      match /sharedWithMe/{ownerId} {
+        allow read: if request.auth.uid == userId;
+        allow create: if request.auth.uid == ownerId && isValidPartnerDoc(ownerId, userId);
+        allow update: if (request.auth.uid == ownerId && isValidPartnerDoc(ownerId, userId)) ||
+                        (request.auth.uid == userId && partnerOnlyAcceptsInvite(existing()));
+        allow delete: if request.auth.uid == ownerId || request.auth.uid == userId;
       }
     }
   }

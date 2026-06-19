@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth, signInWithGoogle, logOut } from './firebase';
+import { api } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
@@ -26,6 +27,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
+      if (user) {
+        api.ensureUserProfile().catch((err) => console.error("Failed to ensure user profile:", err));
+      }
     });
 
     return () => unsubscribe();

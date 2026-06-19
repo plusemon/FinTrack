@@ -1,25 +1,172 @@
-import { Summary, Account, Category, Transaction, Budget } from "../types";
+import { Summary, Account, Category, Transaction, Budget, PartnerRelationship, UserProfile } from "../types";
 import { db, auth } from "../lib/firebase";
 import { collection, doc, getDocs, getDoc, setDoc, addDoc, updateDoc, deleteDoc, query, where } from "firebase/firestore";
 
-const getUserId = () => {
+let activePartnerId: string | null = null;
+let activePartnerPermission: PartnerRelationship["permission"] | null = null;
+
+const getAuthUid = () => {
   const user = auth.currentUser;
   if (!user) throw new Error("User not authenticated");
   return user.uid;
 };
 
+const getEffectiveUserId = () => activePartnerId ?? getAuthUid();
+
 // Base path helper
-const getColRef = (colName: string) => collection(db, `users/${getUserId()}/${colName}`);
-const getDocRef = (colName: string, id: string) => doc(db, `users/${getUserId()}/${colName}`, id);
+const getColRef = (colName: string) => collection(db, `users/${getEffectiveUserId()}/${colName}`);
+const getDocRef = (colName: string, id: string) => doc(db, `users/${getEffectiveUserId()}/${colName}`, id);
+
+const assertCanWrite = () => {
+  if (!activePartnerId) return;
+  if (activePartnerPermission !== "write") {
+    throw new Error("No write permission in partner context");
+  }
+};
+
+const getPartnerDocPath = (ownerId: string, partnerId: string) =>
+  doc(db, `users/${ownerId}/partners`, partnerId);
+
+const getSharedDocPath = (partnerId: string, ownerId: string) =>
+  doc(db, `users/${partnerId}/sharedWithMe`, ownerId);
 
 export const api = {
+  // Viewing context
+  setViewContext(ownerId: string | null, permission?: PartnerRelationship["permission"]) {
+    activePartnerId = ownerId;
+    activePartnerPermission = ownerId ? (permission ?? "read") : null;
+  },
+
+  getViewContext() {
+    return { ownerId: activePartnerId, permission: activePartnerPermission };
+  },
+
+  isPartnerContext() {
+    return !!activePartnerId;
+  },
+
+  // User profile index for email lookup
+  async ensureUserProfile(): Promise<void> {
+    const user = auth.currentUser;
+    if (!user || !user.email) return;
+    await setDoc(
+      doc(db, "userProfiles", user.uid),
+      {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName || "",
+        photoURL: user.photoURL || "",
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+  },
+
+  async findUserByEmail(email: string): Promise<UserProfile | null> {
+    const q = query(collection(db, "userProfiles"), where("email", "==", email));
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return null;
+    return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as UserProfile;
+  },
+
+  // Partner invitations
+  async sendPartnerInvite(partnerEmail: string): Promise<void> {
+    const owner = auth.currentUser;
+    if (!owner || !owner.email) throw new Error("Owner not authenticated");
+
+    const normalizedEmail = partnerEmail.trim().toLowerCase();
+    if (normalizedEmail === owner.email.toLowerCase()) {
+      throw new Error("Cannot invite yourself");
+    }
+
+    const partner = await this.findUserByEmail(normalizedEmail);
+    if (!partner) throw new Error("User not found");
+
+    const ownerId = owner.uid;
+    const partnerId = partner.uid;
+    const now = new Date().toISOString();
+
+    const ownerData: Omit<PartnerRelationship, "id"> = {
+      ownerId,
+      ownerEmail: owner.email,
+      ownerName: owner.displayName || "",
+      ownerPhotoURL: owner.photoURL || "",
+      partnerId,
+      partnerEmail: partner.email,
+      partnerName: partner.displayName || "",
+      partnerPhotoURL: partner.photoURL || "",
+      status: "pending",
+      permission: "write",
+      createdAt: now,
+    };
+
+    const partnerData: Omit<PartnerRelationship, "id"> = {
+      ...ownerData,
+    };
+
+    await setDoc(getPartnerDocPath(ownerId, partnerId), ownerData);
+    await setDoc(getSharedDocPath(partnerId, ownerId), partnerData);
+  },
+
+  async acceptPartnerInvite(ownerId: string): Promise<void> {
+    const partner = auth.currentUser;
+    if (!partner) throw new Error("Not authenticated");
+
+    const partnerId = partner.uid;
+    const now = new Date().toISOString();
+
+    await updateDoc(getPartnerDocPath(ownerId, partnerId), { status: "accepted", acceptedAt: now });
+    await updateDoc(getSharedDocPath(partnerId, ownerId), { status: "accepted", acceptedAt: now });
+  },
+
+  async declinePartnerInvite(ownerId: string): Promise<void> {
+    const partner = auth.currentUser;
+    if (!partner) throw new Error("Not authenticated");
+
+    const partnerId = partner.uid;
+    await updateDoc(getPartnerDocPath(ownerId, partnerId), { status: "revoked" });
+    await updateDoc(getSharedDocPath(partnerId, ownerId), { status: "revoked" });
+  },
+
+  async revokePartnerAccess(partnerId: string): Promise<void> {
+    const owner = auth.currentUser;
+    if (!owner) throw new Error("Not authenticated");
+
+    const ownerId = owner.uid;
+    await updateDoc(getPartnerDocPath(ownerId, partnerId), { status: "revoked" });
+    await updateDoc(getSharedDocPath(partnerId, ownerId), { status: "revoked" });
+  },
+
+  async getMyPartners(): Promise<PartnerRelationship[]> {
+    const ownerId = getAuthUid();
+    const snapshot = await getDocs(collection(db, `users/${ownerId}/partners`));
+    return snapshot.docs
+      .map((d) => ({ id: d.id, ...d.data() } as PartnerRelationship))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+
+  async getSharedWithMe(): Promise<PartnerRelationship[]> {
+    const partnerId = getAuthUid();
+    const snapshot = await getDocs(collection(db, `users/${partnerId}/sharedWithMe`));
+    return snapshot.docs
+      .map((d) => ({ id: d.id, ...d.data() } as PartnerRelationship))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+
+  async getPartnerRelationship(ownerId: string): Promise<PartnerRelationship | null> {
+    const partnerId = getAuthUid();
+    const snap = await getDoc(getPartnerDocPath(ownerId, partnerId));
+    if (!snap.exists()) return null;
+    return { id: snap.id, ...snap.data() } as PartnerRelationship;
+  },
+
   async getSummary(): Promise<Summary> {
     const accounts = await this.getAccounts();
     const transactions = await this.getTransactions();
-    
+
     const totalBalance = accounts.reduce((acc, account) => acc + account.balance, 0);
     const currentMonth = new Date().toISOString().slice(0, 7);
-    
+
     let monthlyIncome = 0;
     let monthlyExpense = 0;
 
@@ -41,17 +188,20 @@ export const api = {
   },
 
   async addAccount(account: Omit<Account, "id">): Promise<{ id: string }> {
-    const data = { ...account, userId: getUserId() };
+    assertCanWrite();
+    const data = { ...account, userId: getEffectiveUserId() };
     const docRef = await addDoc(getColRef('accounts'), data);
     return { id: docRef.id };
   },
 
   async updateAccount(id: string, account: Omit<Account, "id">): Promise<{ success: boolean }> {
-    await updateDoc(getDocRef('accounts', id), { ...account, userId: getUserId() });
+    assertCanWrite();
+    await updateDoc(getDocRef('accounts', id), { ...account, userId: getEffectiveUserId() });
     return { success: true };
   },
 
   async deleteAccount(id: string): Promise<{ success: boolean }> {
+    assertCanWrite();
     await deleteDoc(getDocRef('accounts', id));
     return { success: true };
   },
@@ -62,17 +212,20 @@ export const api = {
   },
 
   async addCategory(category: Omit<Category, "id">): Promise<{ id: string }> {
-    const data = { ...category, userId: getUserId() };
+    assertCanWrite();
+    const data = { ...category, userId: getEffectiveUserId() };
     const docRef = await addDoc(getColRef('categories'), data);
     return { id: docRef.id };
   },
 
   async updateCategory(id: string, category: Omit<Category, "id">): Promise<{ success: boolean }> {
-    await updateDoc(getDocRef('categories', id), { ...category, userId: getUserId() });
+    assertCanWrite();
+    await updateDoc(getDocRef('categories', id), { ...category, userId: getEffectiveUserId() });
     return { success: true };
   },
 
   async deleteCategory(id: string): Promise<{ success: boolean }> {
+    assertCanWrite();
     await deleteDoc(getDocRef('categories', id));
     return { success: true };
   },
@@ -81,30 +234,33 @@ export const api = {
     const { limit = 100, startDate, endDate } = filters;
     const snapshot = await getDocs(getColRef('transactions'));
     let transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
-    
+
     if (startDate) {
       transactions = transactions.filter(t => t.date >= startDate);
     }
     if (endDate) {
       transactions = transactions.filter(t => t.date <= endDate);
     }
-    
+
     transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     return transactions.slice(0, limit);
   },
 
   async addTransaction(transaction: Omit<Transaction, "id">): Promise<{ id: string }> {
-    const data = { ...transaction, userId: getUserId() };
+    assertCanWrite();
+    const data = { ...transaction, userId: getEffectiveUserId() };
     const docRef = await addDoc(getColRef('transactions'), data);
     return { id: docRef.id };
   },
 
   async updateTransaction(id: string, transaction: Omit<Transaction, "id">): Promise<{ success: boolean }> {
-    await updateDoc(getDocRef('transactions', id), { ...transaction, userId: getUserId() });
+    assertCanWrite();
+    await updateDoc(getDocRef('transactions', id), { ...transaction, userId: getEffectiveUserId() });
     return { success: true };
   },
 
   async deleteTransaction(id: string): Promise<{ success: boolean }> {
+    assertCanWrite();
     await deleteDoc(getDocRef('transactions', id));
     return { success: true };
   },
@@ -113,12 +269,12 @@ export const api = {
     const snapshot = await getDocs(getColRef('budgets'));
     const budgets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Budget));
     const transactions = await this.getTransactions();
-    
+
     const getPeriodRange = (period: string) => {
       const now = new Date();
       const start = new Date(now);
       const end = new Date(now);
-      
+
       switch (period) {
         case 'weekly':
           start.setDate(now.getDate() - now.getDay());
@@ -138,7 +294,7 @@ export const api = {
       }
       return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
     };
-    
+
     return budgets.map(budget => {
       const { start, end } = getPeriodRange(budget.period);
       let spent = 0;
@@ -152,17 +308,20 @@ export const api = {
   },
 
   async addBudget(budget: Omit<Budget, "id" | "spent">): Promise<{ id: string }> {
-    const data = { ...budget, userId: getUserId() };
+    assertCanWrite();
+    const data = { ...budget, userId: getEffectiveUserId() };
     const docRef = await addDoc(getColRef('budgets'), data);
     return { id: docRef.id };
   },
 
   async updateBudget(id: string, budget: Omit<Budget, "id" | "spent">): Promise<{ success: boolean }> {
-    await updateDoc(getDocRef('budgets', id), { ...budget, userId: getUserId() });
+    assertCanWrite();
+    await updateDoc(getDocRef('budgets', id), { ...budget, userId: getEffectiveUserId() });
     return { success: true };
   },
 
   async deleteBudget(id: string): Promise<{ success: boolean }> {
+    assertCanWrite();
     await deleteDoc(getDocRef('budgets', id));
     return { success: true };
   },
@@ -205,9 +364,10 @@ export const api = {
   },
 
   async updateSetting(key: string, value: string): Promise<{ success: boolean }> {
+    if (activePartnerId) throw new Error("Cannot change settings in partner context");
     const settings = await this.getSettings() as any;
     settings[key] = value;
-    settings.userId = getUserId();
+    settings.userId = getAuthUid();
     await setDoc(getDocRef('settings', 'profile'), settings);
     return { success: true };
   },
@@ -239,10 +399,11 @@ export const api = {
     reminderTime?: string;
     budgetAlertsEnabled?: boolean;
   }): Promise<{ success: boolean }> {
+    if (activePartnerId) throw new Error("Cannot change settings in partner context");
     const docRef = getDocRef('settings', 'profile');
     const docSnap = await getDoc(docRef);
     const currentData = docSnap.exists() ? docSnap.data() : {};
-    await setDoc(docRef, { ...currentData, ...settings, userId: getUserId() });
+    await setDoc(docRef, { ...currentData, ...settings, userId: getAuthUid() });
     return { success: true };
   },
 
@@ -270,10 +431,11 @@ export const api = {
     pinHash?: string;
     biometricEnabled?: boolean;
   }): Promise<{ success: boolean }> {
+    if (activePartnerId) throw new Error("Cannot change settings in partner context");
     const docRef = getDocRef('settings', 'profile');
     const docSnap = await getDoc(docRef);
     const currentData = docSnap.exists() ? docSnap.data() : {};
-    await setDoc(docRef, { ...currentData, ...settings, userId: getUserId() });
+    await setDoc(docRef, { ...currentData, ...settings, userId: getAuthUid() });
     return { success: true };
   },
 
@@ -301,6 +463,7 @@ export const api = {
   },
 
   async initializeDefaultData(): Promise<void> {
+    if (activePartnerId) return;
     const accounts = await this.getAccounts();
     if (accounts.length > 0) return;
 
@@ -353,11 +516,12 @@ export const api = {
   },
 
   async resetAllData(): Promise<void> {
-    const userId = getUserId();
+    if (activePartnerId) throw new Error("Cannot reset partner data");
+    const userId = getAuthUid();
     const collections = ['accounts', 'categories', 'transactions', 'budgets'];
-    
+
     for (const col of collections) {
-      const snapshot = await getDocs(getColRef(col));
+      const snapshot = await getDocs(collection(db, `users/${userId}/${col}`));
       const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
       await Promise.all(deletePromises);
     }

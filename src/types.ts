@@ -48,3 +48,31 @@ export interface Summary {
   monthlyIncome: number;
   monthlyExpense: number;
 }
+
+export type PartnerStatus = "pending" | "accepted" | "revoked";
+export type PartnerPermission = "read" | "write";
+
+export interface PartnerRelationship {
+  id: string;
+  ownerId: string;
+  ownerEmail?: string;
+  ownerName?: string;
+  ownerPhotoURL?: string;
+  partnerId: string;
+  partnerEmail?: string;
+  partnerName?: string;
+  partnerPhotoURL?: string;
+  status: PartnerStatus;
+  permission: PartnerPermission;
+  createdAt: string;
+  acceptedAt?: string;
+}
+
+export interface UserProfile {
+  id?: string;
+  uid: string;
+  email: string;
+  displayName: string;
+  photoURL?: string;
+  updatedAt: string;
+}
