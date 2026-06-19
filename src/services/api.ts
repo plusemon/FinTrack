@@ -1,6 +1,6 @@
-import { Summary, Account, Category, Transaction, Budget, PartnerRelationship, UserProfile } from "../types";
+import { Summary, Account, Category, Transaction, Budget, PartnerRelationship, UserProfile, AppNotification, NotificationType } from "../types";
 import { db, auth } from "../lib/firebase";
-import { collection, doc, getDocs, getDoc, setDoc, addDoc, updateDoc, deleteDoc, query, where } from "firebase/firestore";
+import { collection, doc, getDocs, getDoc, setDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, limit } from "firebase/firestore";
 
 let activePartnerId: string | null = null;
 let activePartnerPermission: PartnerRelationship["permission"] | null = null;
@@ -106,6 +106,19 @@ export const api = {
 
     await setDoc(getPartnerDocPath(ownerId, partnerId), ownerData);
     await setDoc(getSharedDocPath(partnerId, ownerId), partnerData);
+
+    const { partnerAlertsEnabled } = await this.getNotificationSettings();
+    if (partnerAlertsEnabled) {
+      await this.createNotification({
+        userId: partnerId,
+        type: "partner_invite",
+        title: "partnerInviteTitle",
+        message: "partnerInviteMessage",
+        read: false,
+        createdAt: now,
+        metadata: { inviterName: owner.displayName || owner.email || "" },
+      });
+    }
   },
 
   async acceptPartnerInvite(ownerId: string): Promise<void> {
@@ -117,6 +130,19 @@ export const api = {
 
     await updateDoc(getPartnerDocPath(ownerId, partnerId), { status: "accepted", acceptedAt: now });
     await updateDoc(getSharedDocPath(partnerId, ownerId), { status: "accepted", acceptedAt: now });
+
+    const { partnerAlertsEnabled } = await this.getNotificationSettings();
+    if (partnerAlertsEnabled) {
+      await this.createNotification({
+        userId: ownerId,
+        type: "partner_accept",
+        title: "partnerAcceptTitle",
+        message: "partnerAcceptMessage",
+        read: false,
+        createdAt: now,
+        metadata: { partnerName: partner.displayName || partner.email || "" },
+      });
+    }
   },
 
   async declinePartnerInvite(ownerId: string): Promise<void> {
@@ -133,8 +159,22 @@ export const api = {
     if (!owner) throw new Error("Not authenticated");
 
     const ownerId = owner.uid;
+    const now = new Date().toISOString();
     await updateDoc(getPartnerDocPath(ownerId, partnerId), { status: "revoked" });
     await updateDoc(getSharedDocPath(partnerId, ownerId), { status: "revoked" });
+
+    const { partnerAlertsEnabled } = await this.getNotificationSettings();
+    if (partnerAlertsEnabled) {
+      await this.createNotification({
+        userId: partnerId,
+        type: "partner_revoke",
+        title: "partnerRevokeTitle",
+        message: "partnerRevokeMessage",
+        read: false,
+        createdAt: now,
+        metadata: { ownerName: owner.displayName || owner.email || "" },
+      });
+    }
   },
 
   async getMyPartners(): Promise<PartnerRelationship[]> {
@@ -196,7 +236,8 @@ export const api = {
 
   async updateAccount(id: string, account: Omit<Account, "id">): Promise<{ success: boolean }> {
     assertCanWrite();
-    await updateDoc(getDocRef('accounts', id), { ...account, userId: getEffectiveUserId() });
+    const { id: _, ...data } = account as Account;
+    await updateDoc(getDocRef('accounts', id), { ...data, userId: getEffectiveUserId() });
     return { success: true };
   },
 
@@ -220,7 +261,8 @@ export const api = {
 
   async updateCategory(id: string, category: Omit<Category, "id">): Promise<{ success: boolean }> {
     assertCanWrite();
-    await updateDoc(getDocRef('categories', id), { ...category, userId: getEffectiveUserId() });
+    const { id: _, ...data } = category as Category;
+    await updateDoc(getDocRef('categories', id), { ...data, userId: getEffectiveUserId() });
     return { success: true };
   },
 
@@ -255,7 +297,8 @@ export const api = {
 
   async updateTransaction(id: string, transaction: Omit<Transaction, "id">): Promise<{ success: boolean }> {
     assertCanWrite();
-    await updateDoc(getDocRef('transactions', id), { ...transaction, userId: getEffectiveUserId() });
+    const { id: _, ...data } = transaction as Transaction;
+    await updateDoc(getDocRef('transactions', id), { ...data, userId: getEffectiveUserId() });
     return { success: true };
   },
 
@@ -316,7 +359,8 @@ export const api = {
 
   async updateBudget(id: string, budget: Omit<Budget, "id" | "spent">): Promise<{ success: boolean }> {
     assertCanWrite();
-    await updateDoc(getDocRef('budgets', id), { ...budget, userId: getEffectiveUserId() });
+    const { id: _, spent: __, ...data } = budget as Budget;
+    await updateDoc(getDocRef('budgets', id), { ...data, userId: getEffectiveUserId() });
     return { success: true };
   },
 
@@ -376,6 +420,7 @@ export const api = {
     dailyReminderEnabled: boolean;
     reminderTime: string;
     budgetAlertsEnabled: boolean;
+    partnerAlertsEnabled: boolean;
   }> {
     try {
       const docRef = getDocRef('settings', 'profile');
@@ -386,11 +431,12 @@ export const api = {
           dailyReminderEnabled: data.dailyReminderEnabled || false,
           reminderTime: data.reminderTime || "20:00",
           budgetAlertsEnabled: data.budgetAlertsEnabled ?? true,
+          partnerAlertsEnabled: data.partnerAlertsEnabled ?? true,
         };
       }
-      return { dailyReminderEnabled: false, reminderTime: "20:00", budgetAlertsEnabled: true };
+      return { dailyReminderEnabled: false, reminderTime: "20:00", budgetAlertsEnabled: true, partnerAlertsEnabled: true };
     } catch {
-      return { dailyReminderEnabled: false, reminderTime: "20:00", budgetAlertsEnabled: true };
+      return { dailyReminderEnabled: false, reminderTime: "20:00", budgetAlertsEnabled: true, partnerAlertsEnabled: true };
     }
   },
 
@@ -398,6 +444,7 @@ export const api = {
     dailyReminderEnabled?: boolean;
     reminderTime?: string;
     budgetAlertsEnabled?: boolean;
+    partnerAlertsEnabled?: boolean;
   }): Promise<{ success: boolean }> {
     if (activePartnerId) throw new Error("Cannot change settings in partner context");
     const docRef = getDocRef('settings', 'profile');
@@ -460,6 +507,136 @@ export const api = {
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  },
+
+  // Notifications
+  getNotificationsColRef(userId: string) {
+    return collection(db, `users/${userId}/notifications`);
+  },
+
+  getNotificationDocRef(userId: string, id: string) {
+    return doc(db, `users/${userId}/notifications`, id);
+  },
+
+  async createNotification(notification: Omit<AppNotification, "id">): Promise<{ id: string }> {
+    const docRef = await addDoc(this.getNotificationsColRef(notification.userId), notification);
+    await this.cleanupOldNotificationsForUser(notification.userId);
+    return { id: docRef.id };
+  },
+
+  async getNotifications(limitCount: number = 50): Promise<AppNotification[]> {
+    const userId = getAuthUid();
+    const q = query(
+      this.getNotificationsColRef(userId),
+      orderBy("createdAt", "desc"),
+      limit(limitCount)
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((d) => {
+      const data = d.data() as AppNotification;
+      return { id: d.id, ...data };
+    });
+  },
+
+  async markNotificationRead(id: string, read: boolean = true): Promise<{ success: boolean }> {
+    const userId = getAuthUid();
+    await updateDoc(this.getNotificationDocRef(userId, id), { read });
+    return { success: true };
+  },
+
+  async markAllNotificationsRead(): Promise<{ success: boolean }> {
+    const userId = getAuthUid();
+    const snapshot = await getDocs(this.getNotificationsColRef(userId));
+    await Promise.all(snapshot.docs.map((d) => updateDoc(d.ref, { read: true })));
+    return { success: true };
+  },
+
+  async deleteNotification(id: string): Promise<{ success: boolean }> {
+    const userId = getAuthUid();
+    await deleteDoc(this.getNotificationDocRef(userId, id));
+    return { success: true };
+  },
+
+  async cleanupOldNotifications(): Promise<{ success: boolean }> {
+    const userId = getAuthUid();
+    return this.cleanupOldNotificationsForUser(userId);
+  },
+
+  async cleanupOldNotificationsForUser(userId: string): Promise<{ success: boolean }> {
+    const q = query(this.getNotificationsColRef(userId), orderBy("createdAt", "desc"));
+    const snapshot = await getDocs(q);
+    const toDelete = snapshot.docs.slice(50);
+    await Promise.all(toDelete.map((d) => deleteDoc(d.ref)));
+    return { success: true };
+  },
+
+  async findExistingBudgetAlertNotification(budgetId: string, type: "budget_warning" | "budget_exceeded", periodKey: string): Promise<AppNotification | null> {
+    const userId = getAuthUid();
+    const q = query(
+      this.getNotificationsColRef(userId),
+      where("type", "==", type),
+      where("metadata.budgetId", "==", budgetId),
+      orderBy("createdAt", "desc"),
+      limit(10)
+    );
+    const snapshot = await getDocs(q);
+    for (const d of snapshot.docs) {
+      const data = d.data() as AppNotification;
+      if (data.metadata?.periodKey === periodKey) {
+        return { id: d.id, ...data };
+      }
+    }
+    return null;
+  },
+
+  async createBudgetAlertNotifications(): Promise<void> {
+    if (activePartnerId) return;
+    const { budgetAlertsEnabled } = await this.getNotificationSettings();
+    if (!budgetAlertsEnabled) return;
+
+    const { exceeded, warning } = await this.checkBudgetAlerts();
+    const now = new Date();
+    const month = now.toISOString().slice(0, 7);
+    const userId = getAuthUid();
+
+    const getPeriodKey = (period: string) => {
+      if (period === "weekly") {
+        const start = new Date(now);
+        start.setDate(now.getDate() - now.getDay());
+        return start.toISOString().split("T")[0];
+      }
+      if (period === "yearly") return `${now.getFullYear()}`;
+      return month;
+    };
+
+    const createIfNeeded = async (budget: Budget, type: "budget_warning" | "budget_exceeded") => {
+      const periodKey = getPeriodKey(budget.period);
+      const existing = await this.findExistingBudgetAlertNotification(budget.id, type, periodKey);
+      if (existing) return;
+      await this.createNotification({
+        userId,
+        type,
+        title: type === "budget_warning" ? "budgetWarningTitle" : "budgetExceededTitle",
+        message: type === "budget_warning" ? "budgetWarningMessage" : "budgetExceededMessage",
+        read: false,
+        createdAt: now.toISOString(),
+        metadata: {
+          budgetId: budget.id,
+          category_id: budget.category_id,
+          period: budget.period,
+          month,
+          periodKey,
+          category: budget.category_name || "Global",
+        },
+      });
+    };
+
+    for (const budget of exceeded) {
+      await createIfNeeded(budget, "budget_exceeded");
+    }
+    for (const budget of warning) {
+      await createIfNeeded(budget, "budget_warning");
+    }
   },
 
   async initializeDefaultData(): Promise<void> {

@@ -34,6 +34,12 @@ export default function TransactionForm({ onClose, currency, language, transacti
     api.getCategories().then(setCategories);
   }, []);
 
+  useEffect(() => {
+    if (accounts.length === 1 && !accountId) {
+      setAccountId(accounts[0].id.toString());
+    }
+  }, [accounts, accountId]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || !accountId || (type !== 'transfer' && !categoryId)) {
@@ -103,6 +109,7 @@ export default function TransactionForm({ onClose, currency, language, transacti
           }
         }
       }
+      await api.createBudgetAlertNotifications();
       onClose();
     } catch (error) {
       console.error("Failed to submit transaction:", error);
@@ -115,6 +122,7 @@ export default function TransactionForm({ onClose, currency, language, transacti
   const handleDelete = async () => {
     if (transaction?.id && window.confirm(t.confirmDelete)) {
       await api.deleteTransaction(transaction.id);
+      await api.createBudgetAlertNotifications();
       onClose();
     }
   };

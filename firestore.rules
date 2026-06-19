@@ -104,7 +104,7 @@ service cloud.firestore {
 
     function isValidSettings() {
       let data = incoming();
-      return data.keys().hasOnly(['currency', 'theme', 'language', 'userId', 'pinHash', 'biometricEnabled', 'dailyReminderEnabled', 'reminderTime', 'budgetAlertsEnabled']) &&
+      return data.keys().hasOnly(['currency', 'theme', 'language', 'userId', 'pinHash', 'biometricEnabled', 'dailyReminderEnabled', 'reminderTime', 'budgetAlertsEnabled', 'partnerAlertsEnabled']) &&
              data.keys().hasAll(['userId']) &&
              data.userId == request.auth.uid;
     }
@@ -138,6 +138,16 @@ service cloud.firestore {
              data.ownerId == existingData.ownerId &&
              data.partnerId == existingData.partnerId &&
              isValidString(data.acceptedAt, 30);
+    }
+
+    function isValidNotification() {
+      let data = incoming();
+      return data.keys().hasOnly(['userId', 'type', 'title', 'message', 'read', 'createdAt', 'metadata']) &&
+             data.keys().hasAll(['userId', 'type', 'title', 'message', 'read', 'createdAt']) &&
+             data.userId == userId &&
+             data.type in ['partner_invite', 'partner_accept', 'partner_revoke', 'budget_warning', 'budget_exceeded', 'daily_reminder'] &&
+             data.read is bool &&
+             isValidString(data.createdAt, 30);
     }
 
     //////////////////// Path Rules ////////////////////
@@ -191,6 +201,12 @@ service cloud.firestore {
         allow update: if (request.auth.uid == ownerId && isValidPartnerDoc(ownerId, userId)) ||
                         (request.auth.uid == userId && partnerOnlyAcceptsInvite(existing()));
         allow delete: if request.auth.uid == ownerId || request.auth.uid == userId;
+      }
+      match /notifications/{notificationId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidNotification();
+        allow update: if isOwner(userId) && isValidNotification();
+        allow delete: if isOwner(userId);
       }
     }
   }

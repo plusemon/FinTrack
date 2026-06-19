@@ -4,6 +4,7 @@ import App from './App.tsx';
 import './index.css';
 import { AuthProvider } from './lib/AuthContext.tsx';
 import { PartnerProvider } from './lib/PartnerContext.tsx';
+import { NotificationProvider } from './lib/NotificationContext.tsx';
 import ErrorBoundary from './components/ErrorBoundary.tsx';
 
 // Register PWA service worker
@@ -20,7 +21,9 @@ createRoot(document.getElementById('root')!).render(
     <ErrorBoundary>
       <AuthProvider>
         <PartnerProvider>
-          <App />
+          <NotificationProvider>
+            <App />
+          </NotificationProvider>
         </PartnerProvider>
       </AuthProvider>
     </ErrorBoundary>

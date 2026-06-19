@@ -228,6 +228,7 @@ function BudgetForm({ onClose, categories, t, budget, onToast }: { onClose: () =
         await api.addBudget(data);
         onToast(t.budgetCreated || "Budget created successfully");
       }
+      await api.createBudgetAlertNotifications();
       onClose();
     } catch (error: any) {
       onToast(error.message || "Failed to save budget", "error");
@@ -240,6 +241,7 @@ function BudgetForm({ onClose, categories, t, budget, onToast }: { onClose: () =
     try {
       await api.deleteBudget(budget.id);
       onToast(t.budgetDeleted || "Budget deleted successfully");
+      await api.createBudgetAlertNotifications();
       onClose();
     } catch (error: any) {
       onToast(error.message || "Failed to delete budget", "error");

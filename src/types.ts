@@ -76,3 +76,22 @@ export interface UserProfile {
   photoURL?: string;
   updatedAt: string;
 }
+
+export type NotificationType =
+  | "partner_invite"
+  | "partner_accept"
+  | "partner_revoke"
+  | "budget_warning"
+  | "budget_exceeded"
+  | "daily_reminder";
+
+export interface AppNotification {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+  metadata?: Record<string, unknown>;
+}

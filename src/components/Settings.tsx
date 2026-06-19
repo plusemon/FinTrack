@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Globe, CreditCard, Bell, Shield, Info, Languages, LogOut, Trash2, X, Fingerprint } from "lucide-react";
 import { api } from "../services/api";
+import { requestNotificationPermission } from "../services/notifications";
 import { translations, Language } from "../i18n/translations";
 import { useAuth } from "../lib/AuthContext";
 import { deleteUserAccount, db } from "../lib/firebase";
@@ -26,9 +27,10 @@ interface SettingsProps {
   currentCurrency: string;
   onLanguageChange: (language: Language) => void;
   currentLanguage: Language;
+  onNotificationSettingsChange?: () => void;
 }
 
-export default function Settings({ onCurrencyChange, currentCurrency, onLanguageChange, currentLanguage }: SettingsProps) {
+export default function Settings({ onCurrencyChange, currentCurrency, onLanguageChange, currentLanguage, onNotificationSettingsChange }: SettingsProps) {
   const [currency, setCurrency] = useState(currentCurrency);
   const [language, setLanguage] = useState(currentLanguage);
   const [isSaving, setIsSaving] = useState(false);
@@ -40,6 +42,7 @@ export default function Settings({ onCurrencyChange, currentCurrency, onLanguage
   const [dailyReminderEnabled, setDailyReminderEnabled] = useState(false);
   const [reminderTime, setReminderTime] = useState("20:00");
   const [budgetAlertsEnabled, setBudgetAlertsEnabled] = useState(true);
+  const [partnerAlertsEnabled, setPartnerAlertsEnabled] = useState(true);
   const [pinEnabled, setPinEnabled] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricSupported, setBiometricSupported] = useState(true);
@@ -65,6 +68,7 @@ export default function Settings({ onCurrencyChange, currentCurrency, onLanguage
       setDailyReminderEnabled(settings.dailyReminderEnabled);
       setReminderTime(settings.reminderTime);
       setBudgetAlertsEnabled(settings.budgetAlertsEnabled);
+      setPartnerAlertsEnabled(settings.partnerAlertsEnabled ?? true);
     } catch (error) {
       console.error("Failed to load notification settings:", error);
     }
@@ -95,7 +99,7 @@ export default function Settings({ onCurrencyChange, currentCurrency, onLanguage
 
   const handleDailyReminderToggle = async (enabled: boolean) => {
     if (enabled) {
-      const permission = await Notification.requestPermission();
+      const permission = await requestNotificationPermission();
       if (permission !== "granted") {
         setToast({ message: t.notificationPermissionDenied || "Notification permission denied", type: "error" });
         return;
@@ -105,6 +109,7 @@ export default function Settings({ onCurrencyChange, currentCurrency, onLanguage
     setIsSaving(true);
     try {
       await api.updateNotificationSettings({ dailyReminderEnabled: enabled });
+      onNotificationSettingsChange?.();
     } catch (error) {
       console.error("Failed to update daily reminder setting:", error);
     } finally {
@@ -117,6 +122,7 @@ export default function Settings({ onCurrencyChange, currentCurrency, onLanguage
     setIsSaving(true);
     try {
       await api.updateNotificationSettings({ reminderTime: time });
+      onNotificationSettingsChange?.();
     } catch (error) {
       console.error("Failed to update reminder time:", error);
     } finally {
@@ -129,8 +135,22 @@ export default function Settings({ onCurrencyChange, currentCurrency, onLanguage
     setIsSaving(true);
     try {
       await api.updateNotificationSettings({ budgetAlertsEnabled: enabled });
+      onNotificationSettingsChange?.();
     } catch (error) {
       console.error("Failed to update budget alerts setting:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handlePartnerAlertsToggle = async (enabled: boolean) => {
+    setPartnerAlertsEnabled(enabled);
+    setIsSaving(true);
+    try {
+      await api.updateNotificationSettings({ partnerAlertsEnabled: enabled });
+      onNotificationSettingsChange?.();
+    } catch (error) {
+      console.error("Failed to update partner alerts setting:", error);
     } finally {
       setIsSaving(false);
     }
@@ -337,6 +357,13 @@ export default function Settings({ onCurrencyChange, currentCurrency, onLanguage
               <p className="text-sm text-zinc-500 dark:text-zinc-400">Receive alerts when you exceed 80% of your budget</p>
             </div>
             <Toggle enabled={budgetAlertsEnabled} onChange={handleBudgetAlertsToggle} disabled={isSaving} />
+          </div>
+          <div className="flex items-center justify-between pt-2 border-t border-zinc-200 dark:border-white/5">
+            <div>
+              <p className="font-bold text-zinc-900 dark:text-zinc-100">{t.partnerAlerts}</p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">{t.partnerAlertsDescription}</p>
+            </div>
+            <Toggle enabled={partnerAlertsEnabled} onChange={handlePartnerAlertsToggle} disabled={isSaving} />
           </div>
         </div>
       </div>

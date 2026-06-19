@@ -13,7 +13,6 @@ import {
   TrendingDown,
   ArrowRightLeft,
   Settings,
-  Bell,
   Sun,
   Moon,
   Shield,
@@ -38,12 +37,16 @@ import PartnerSwitcher from "./components/PartnerSwitcher";
 
 import { useAuth } from "./lib/AuthContext";
 import { usePartner } from "./lib/PartnerContext";
+import { useNotifications } from "./lib/NotificationContext";
+import NotificationBell from "./components/ui/NotificationBell";
+import { scheduleDailyReminder } from "./services/notifications";
 
 type View = "dashboard" | "transactions" | "accounts" | "categories" | "budgets" | "ai-chat" | "more" | "settings";
 
 export default function App() {
   const { user, loading, signInWithGoogle, logOut } = useAuth();
   const { activeOwnerId, activeOwnerName } = usePartner();
+  const { notify } = useNotifications();
   const [activeView, setActiveView] = useState<View>("dashboard");
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -56,6 +59,11 @@ export default function App() {
   const [pinInput, setPinInput] = useState("");
   const [pinError, setPinError] = useState("");
   const [isVerifyingPin, setIsVerifyingPin] = useState(false);
+  const [notificationSettings, setNotificationSettings] = useState({
+    dailyReminderEnabled: false,
+    reminderTime: "20:00",
+    budgetAlertsEnabled: true,
+  });
 
   const t = translations[language];
 
@@ -64,6 +72,7 @@ export default function App() {
       fetchSummary();
       fetchSettings();
       loadSecuritySettings();
+      loadNotificationSettings();
       api.initializeDefaultData();
     }
   }, [user]);
@@ -156,6 +165,48 @@ export default function App() {
       console.error("Failed to fetch settings:", error);
     }
   };
+
+  const loadNotificationSettings = async () => {
+    if (!user) return;
+    try {
+      const settings = await api.getNotificationSettings();
+      setNotificationSettings(settings);
+    } catch (error) {
+      console.error("Failed to load notification settings:", error);
+    }
+  };
+
+  const handleNotificationSettingsChange = async () => {
+    await loadNotificationSettings();
+  };
+
+  const checkBudgetAlerts = async () => {
+    if (!user || activeOwnerId) return;
+    try {
+      await api.createBudgetAlertNotifications();
+    } catch (error) {
+      console.error("Failed to check budget alerts:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (!user) return;
+    if (!notificationSettings.dailyReminderEnabled) return;
+    const clear = scheduleDailyReminder(
+      notificationSettings.dailyReminderEnabled,
+      notificationSettings.reminderTime,
+      async () => {
+        await notify("daily_reminder", "dailyReminderTitle", "dailyReminderMessage");
+      }
+    );
+    return clear;
+  }, [user, notificationSettings.dailyReminderEnabled, notificationSettings.reminderTime, notify]);
+
+  useEffect(() => {
+    if (user && notificationSettings.budgetAlertsEnabled) {
+      checkBudgetAlerts();
+    }
+  }, [user, notificationSettings.budgetAlertsEnabled]);
 
   useEffect(() => {
     if (activeOwnerId) {
@@ -311,13 +362,7 @@ export default function App() {
             {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
           </button>
           <PartnerSwitcher language={language} theme={theme} />
-          <button className={cn(
-            "p-2 relative transition-colors",
-            theme === "dark" ? "text-zinc-400 hover:text-zinc-200" : "text-zinc-400 hover:text-zinc-600"
-          )}>
-            <Bell size={20} />
-            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-zinc-900"></span>
-          </button>
+          <NotificationBell language={language} theme={theme} />
           <button
             onClick={() => !activeOwnerId && setActiveView("settings")}
             disabled={!!activeOwnerId}
@@ -360,7 +405,7 @@ export default function App() {
               {activeView === "categories" && <Categories language={language} />}
               {activeView === "budgets" && <Budgets currency={currency} language={language} />}
               {activeView === "ai-chat" && <AIChat language={language} />}
-              {activeView === "settings" && <SettingsView currentCurrency={currency} onCurrencyChange={setCurrency} currentLanguage={language} onLanguageChange={setLanguage} />}
+              {activeView === "settings" && <SettingsView currentCurrency={currency} onCurrencyChange={setCurrency} currentLanguage={language} onLanguageChange={setLanguage} onNotificationSettingsChange={handleNotificationSettingsChange} />}
               {activeView === "more" && (
                 <div className="grid grid-cols-2 gap-4">
                   <button 
